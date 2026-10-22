@@ -15,8 +15,10 @@ const MAXE=5,TIME=15;
 const $=s=>document.querySelector(s),h=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const sh=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const ls={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
-/* Classement : stocké localement. Pour un vrai classement mondial, remplacer ces deux fonctions par des appels à un serveur (Supabase, Firebase…). */
-const API={async save(n,s){const l=ls.get("pkq_lb",[]);l.push({n,s,d:Date.now()});l.sort((a,b)=>b.s-a.s);ls.set("pkq_lb",l.slice(0,50))},async top(){return ls.get("pkq_lb",[]).slice(0,10)}};
+/* Serveur : comptes et classement. Remplacer l’adresse par celle du serveur une fois hébergé en ligne. */
+const SERVEUR="http://localhost:3000";
+async function srv(path,body){const k=ls.get("pkq_token",null);let r;try{r=await fetch(SERVEUR+path,{method:body?"POST":"GET",headers:{"Content-Type":"application/json",...(k?{Authorization:"Bearer "+k}:{})},body:body?JSON.stringify(body):undefined})}catch{throw"Serveur injoignable."}const d=await r.json().catch(()=>({}));if(!r.ok)throw d.erreur||"Erreur du serveur.";return d}
+const API={async save(n,s){await srv("/scores",{mode:"Compétition",points:s})},async top(){return(await srv("/classement?mode="+encodeURIComponent("Compétition"))).map(r=>({n:r.pseudo,s:r.points}))}};
 let S,tm;
 const A=html=>{$("#app").innerHTML=html};
 
@@ -28,7 +30,7 @@ A(`<div class="top"><div><small>QUIZ POKÉMON</small><h1>CHOISIS TON MODE</h1></
 <button class="mode" onclick="setup('compet')">🏆<h2>Compétition</h2>${MAXE} épreuves et ta place dans le classement. Compte requis.</button></div>
 <div class="row"><button class="btn alt" onclick="home()">Accueil</button><button class="btn alt" onclick="board()">Voir le classement</button></div>`)}
 
-async function board(){const l=await API.top();
+async function board(){const l=await API.top().catch(()=>[]);
 A(`<div class="top"><div><small>COMPÉTITION</small><h1>CLASSEMENT</h1></div></div><div class="panel">${l.length?`<table><tr><th>#</th><th>Joueur</th><th>Points</th></tr>${l.map((r,i)=>`<tr><td>${i+1}</td><td>${h(r.n)}</td><td>${r.s}</td></tr>`).join("")}</table>`:`<p class="c mut">Aucun score pour l’instant. Lance une Compétition pour ouvrir le classement.</p>`}</div><div class="row"><button class="btn" onclick="modes()">Retour</button></div>`)}
 
 function setup(mode){
@@ -76,30 +78,29 @@ function turn(next){const first=next;A(`${topbar(first?"ÉPREUVE SUIVANTE":"AU T
 
 async function finish(){clearInterval(tm);let best=ls.get(bestKey(),0),extra="";
 if(S.mode==="libre"){const s=S.sc[0],rec=s>best;if(rec)ls.set(bestKey(),s);extra=rec?`<p class="c" style="color:var(--gold)">Nouveau record personnel !</p>`:`<p class="c mut">Ton record : ${best} pts</p>`}
-if(S.mode==="compet"){await API.save(S.players[0],S.sc[0]);extra=`<p class="c mut">Score enregistré dans le classement.</p>`}
+if(S.mode==="compet"){const ok=await API.save(S.players[0],S.sc[0]).then(()=>1,()=>0);extra=`<p class="c mut">${ok?"Score enregistré dans le classement.":"Score non enregistré : serveur injoignable ou session expirée (reconnecte-toi)."}</p>`}
 const r=S.players.map((p,i)=>({p,s:S.sc[i]})).sort((a,b)=>b.s-a.s);
 A(`<div class="top"><div><small>QUIZ POKÉMON</small><h1>RÉSULTATS</h1></div></div><div class="panel"><table><tr><th>#</th><th>Joueur</th><th>Points</th></tr>${r.map((x,i)=>`<tr><td>${i+1}</td><td>${h(x.p)}</td><td>${x.s}</td></tr>`).join("")}</table>${extra}</div><div class="row"><button class="btn" onclick="modes()">Menu</button>${S.mode==="compet"?`<button class="btn alt" onclick="board()">Classement</button>`:""}</div>`)}
 
-/* ===== COMPTES : stockés dans ce navigateur. Pour de vrais comptes en ligne, remplacer l’objet AUTH par un service (Supabase, Firebase Auth…). ===== */
+/* ===== COMPTES : gérés par le serveur (le pseudo et le jeton de connexion sont gardés dans le navigateur). ===== */
 const U={cur:()=>ls.get("pkq_session",null)};
 const bestKey=()=>"pkq_best"+(U.cur()?"_"+U.cur().toLowerCase():"");
-async function hash(t){if(!(window.crypto&&crypto.subtle))return "p"+t;const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("pkq:"+t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
 const AUTH={
-async signup(n,p){const l=ls.get("pkq_users",[]),id=n.toLowerCase();if(l.some(u=>u.id===id))throw"Ce pseudo est déjà pris.";l.push({id,name:n,h:await hash(id+p)});ls.set("pkq_users",l);ls.set("pkq_session",n)},
-async login(n,p){const id=n.toLowerCase(),u=ls.get("pkq_users",[]).find(u=>u.id===id);if(!u||u.h!==await hash(id+p))throw"Pseudo ou mot de passe incorrect.";ls.set("pkq_session",u.name)}};
-function logout(){ls.set("pkq_session",null);home()}
+async signup(n,p){const r=await srv("/inscription",{pseudo:n,mdp:p});ls.set("pkq_session",r.pseudo);ls.set("pkq_token",r.token)},
+async login(n,p){const r=await srv("/connexion",{pseudo:n,mdp:p});ls.set("pkq_session",r.pseudo);ls.set("pkq_token",r.token)}};
+function logout(){ls.set("pkq_session",null);ls.set("pkq_token",null);home()}
 function navHtml(){const u=U.cur();return `<div class="nav">${u?`<span>👤 ${h(u)}</span><button class="btn alt" onclick="logout()">Déconnexion</button>`:`<button class="btn alt" onclick="auth('in')">Connexion</button><button class="btn" onclick="auth('up')">Créer un compte</button>`}</div>`}
 
 function auth(tab,next){clearInterval(tm);const up=tab==="up";
 A(`<div class="top"><div><small>QUIZ POKÉMON</small><h1>${up?"CRÉER UN COMPTE":"CONNEXION"}</h1></div></div>
 <div class="panel" style="max-width:440px;margin:14px auto"><div class="tabs"><button class="btn ${up?"":"alt"}" onclick="auth('in',${next?`'${next}'`:"undefined"})">Connexion</button><button class="btn ${up?"alt":""}" onclick="auth('up',${next?`'${next}'`:"undefined"})">Inscription</button></div>
 ${next?`<p class="mut">La Compétition demande un compte pour t’inscrire au classement.</p>`:""}
-<input id="au" maxlength="16" placeholder="Pseudo (3 à 16 caractères)" autocomplete="username"><input id="pw" type="password" placeholder="Mot de passe (6 caractères minimum)" autocomplete="${up?"new-password":"current-password"}">
+<input id="au" maxlength="16" placeholder="Pseudo (3 à 16 caractères)" autocomplete="username"><input id="pw" type="password" placeholder="Mot de passe (8 caractères minimum)" autocomplete="${up?"new-password":"current-password"}">
 <p class="err" id="err"></p><div class="row" style="margin-top:6px"><button class="btn alt" onclick="${next?"modes()":"home()"}">Retour</button><button class="btn" onclick="sub(${up},${next?`'${next}'`:"undefined"})">${up?"Créer mon compte":"Me connecter"}</button></div></div>`)}
 
 async function sub(up,next){const n=$("#au").value.trim(),p=$("#pw").value;
 if(up&&(n.length<3||!/^[\w\- ]+$/.test(n)))return $("#err").textContent="Le pseudo doit faire 3 à 16 caractères : lettres, chiffres, espace, - ou _.";
-if(up&&p.length<6)return $("#err").textContent="Le mot de passe doit faire au moins 6 caractères.";
+if(up&&p.length<8)return $("#err").textContent="Le mot de passe doit faire au moins 8 caractères.";
 try{await(up?AUTH.signup(n,p):AUTH.login(n,p))}catch(e){return $("#err").textContent=String(e)}
 next?setup(next):home()}
 
