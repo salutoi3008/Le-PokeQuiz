@@ -16,7 +16,7 @@ const $=s=>document.querySelector(s),h=s=>String(s).replace(/[&<>"]/g,c=>({"&":"
 const sh=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const ls={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 /* Serveur : comptes et classement. Remplacer l’adresse par celle du serveur une fois hébergé en ligne. */
-const SERVEUR="http://localhost:3000";
+const SERVEUR="https://pokequiz-serveur.onrender.com";
 async function srv(path,body){const k=ls.get("pkq_token",null);let r;try{r=await fetch(SERVEUR+path,{method:body?"POST":"GET",headers:{"Content-Type":"application/json",...(k?{Authorization:"Bearer "+k}:{})},body:body?JSON.stringify(body):undefined})}catch{throw"Serveur injoignable."}const d=await r.json().catch(()=>({}));if(!r.ok)throw d.erreur||"Erreur du serveur.";return d}
 const API={async save(n,s){await srv("/scores",{mode:"Compétition",points:s})},async top(){return(await srv("/classement?mode="+encodeURIComponent("Compétition"))).map(r=>({n:r.pseudo,s:r.points}))}};
 let S,tm;
