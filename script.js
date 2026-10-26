@@ -1,9 +1,9 @@
 /* ===== ÉPREUVES (cahier des charges). ok:false = pas encore jouable. q: [question, bonne réponse, autres réponses acceptées…] ===== */
 const E=[
-{n:"Le cri du Pokémon",e:"🔊",c:"#3d6fd0",max:15,bn:["Clairvoyance","Affiche le type (manche 4)"],ok:false,q:[]},
-{n:"La description Pokédex",e:"📖",c:"#2fa36b",max:9,bn:["Échange Psy","Change la description"],ok:false,q:[]},
-{n:"Le lieu et son jeu",e:"📍",c:"#2a9bb0",max:6,bn:["Téléport","Change le lieu"],ok:false,q:[]},
-{n:"L’anime Pokémon",e:"📺",c:"#c04aa0",max:10,pts:2,nq:5,bn:["Jackpot","Donne la réponse, sans point"],ok:true,q:[
+{n:"Écho Sauvage",d:"Retrouve le Pokémon grâce à son cri",e:"🔊",c:"#3d6fd0",max:15,bn:["Clairvoyance","Affiche le type (manche 4)"],ok:false,q:[]},
+{n:"Les Archives du Pokédex",d:"Retrouve le Pokémon grâce à sa description",e:"📖",c:"#2fa36b",max:9,bn:["Échange Psy","Change la description"],ok:false,q:[]},
+{n:"Carte au Trésor",d:"Retrouve le jeu d’où provient le lieu",e:"📍",c:"#2a9bb0",max:6,bn:["Téléport","Change le lieu"],ok:false,q:[]},
+{n:"Anime Attitude",d:"Questions sur l’anime Pokémon",e:"📺",c:"#c04aa0",max:10,pts:2,nq:5,bn:["Jackpot","Donne la réponse, sans point"],ok:true,q:[
 ["Quel est le Pokémon de départ de Sacha dans la série ?","Pikachu"],
 ["Comment s’appelle le village natal de Sacha ?","Bourg Palette","Bourg-Palette"],
 ["Comment s’appelle le professeur Pokémon de Bourg Palette ?","Chen","Professeur Chen"],
@@ -11,7 +11,7 @@ const E=[
 ["Quel champion d’arène d’Argenta voyage avec Sacha au début ?","Pierre"],
 ["Quel Pokémon créé génétiquement est l’adversaire du premier film ?","Mewtwo"],
 ["Quel starter accompagne Liko dans Pokémon Horizons ?","Poussacha"]]},
-{n:"Les jeux et spin-off",e:"🎮",c:"#d04a4a",max:10,pts:2,nq:5,bn:["Jackpot","Donne la réponse, sans point"],ok:true,q:[
+{n:"Les jeux et spin-off",d:"Questions sur les jeux et les spin-off",e:"🎮",c:"#d04a4a",max:10,pts:2,nq:5,bn:["Jackpot","Donne la réponse, sans point"],ok:true,q:[
 ["Dans quelle région se passent Pokémon Rouge et Bleu ?","Kanto"],
 ["Quel jeu permet de capturer des Pokémon en réalité augmentée ?","Pokémon GO","GO"],
 ["Sur quelle console est sorti Pokémon Colosseum ?","GameCube","Game Cube"],
@@ -19,10 +19,13 @@ const E=[
 ["Sur quelle console est sorti PokéPark ?","Wii"],
 ["Dans quelle région se passent Épée et Bouclier ?","Galar"],
 ["Dans quelle région se passent Écarlate et Violet ?","Paldea"]]},
-{n:"Le thème du Légendaire",e:"🎵",c:"#d0a82b",max:15,bn:["Clairvoyance","Affiche le ou les types"],ok:false,q:[]},
-{n:"Le type du Pokémon",e:"🔥",c:"#d0662b",max:20,bn:["Multi-Type","Change le double type"],ok:false,q:[]},
-{n:"Les dresseurs importants",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,q:[]}
+{n:"Le thème du Légendaire",d:"Retrouve le Légendaire grâce à son thème musical",e:"🎵",c:"#d0a82b",max:15,bn:["Clairvoyance","Affiche le ou les types"],ok:false,q:[]},
+{n:"Le type du Pokémon",d:"Donne un Pokémon qui a le type affiché",e:"🔥",c:"#d0662b",max:20,bn:["Multi-Type","Change le double type"],ok:false,q:[]},
+{n:"Les dresseurs importants",d:"Donne 3 Pokémon du dresseur affiché",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,q:[]}
 ];
+const BI={"Clairvoyance":"🔮","Échange Psy":"🔄","Téléport":"🌀","Jackpot":"🎰","Multi-Type":"🌈","Détection":"🔍"};
+const SB=[["g","💪","Gonflette","Double les points de la prochaine épreuve que tu choisis"],["m","⏱️","Métronome","Choisit une épreuve au hasard à ta place"]];
+const RESTE=()=>E.map((x,i)=>i).filter(i=>E[i].ok&&!S.played.includes(i));
 const MAXE=E.filter(x=>x.ok).length,TIME=30;
 const norm=s=>String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"");
 const $=s=>document.querySelector(s),h=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -51,32 +54,37 @@ if(mode==="libre")return begin(mode,["Moi"]);
 if(mode==="compet")return U.cur()?begin("compet",[U.cur()]):auth("in","compet");
 else A(`<div class="top"><div><small>VERSUS</small><h1>LES JOUEURS</h1></div></div><div class="panel">${[1,2,3,4].map(i=>`<input id="p${i-1}" maxlength="16" placeholder="Joueur ${i}${i>2?" (facultatif)":""}">`).join("")}<div class="row"><button class="btn alt" onclick="modes()">Retour</button><button class="btn" onclick="begin('versus',[0,1,2,3].map(i=>$('#p'+i).value.trim()).filter(Boolean).concat(['Joueur 1','Joueur 2']).slice(0,Math.max(2,[0,1,2,3].filter(i=>$('#p'+i).value.trim()).length)))">Lancer</button></div></div>`)}
 
-function begin(mode,players){S={mode,players,sc:players.map(()=>0),b:players.map(()=>({})),played:[],pi:0};hub()}
+function begin(mode,players){S={mode,players,sc:players.map(()=>0),b:players.map(()=>({g:1,m:1,e:{}})),played:[],pi:0};hub()}
 
 function topbar(title){const mx=S.mode==="libre"?"":`<div class="mid">ÉPREUVES JOUÉES<div class="dots">${Array.from({length:MAXE},(_,i)=>`<i class="${i<S.played.length?"on":""}"></i>`).join("")}</div></div>`;
 const sc=S.players.length>1?S.players.map((p,i)=>`${h(p)} : ${S.sc[i]}`).join(" | "):"";
 return `<div class="top"><div><small>QUIZ POKÉMON</small><h1>${title}</h1></div>${mx}<div class="score" style="${mx?"":"margin-left:auto"}"><small>SCORE${S.players.length>1?" — "+h(S.players[S.pi]):""}</small><b>${S.sc[S.pi]}</b></div></div>${sc?`<p class="c mut" style="margin-top:8px">${sc}</p>`:""}`}
 
-function bonusBar(live){const x=E[S.ei],u=S.b[S.pi][S.ei];return `<div class="panel bonus"><button class="bn" ${live&&!u?"":"disabled"} onclick="useB()" title="${h(x.bn[1])}"><span>🎁</span>${h(x.bn[0])}<br>${h(x.bn[1])}</button></div>`}
+function bonusBar(live){const x=E[S.ei],u=S.b[S.pi].e[S.ei];return `<div class="panel bonus"><button class="bn" ${live&&!u?"":"disabled"} onclick="useB()" title="${h(x.bn[1])}"><span>${BI[x.bn[0]]}</span>${h(x.bn[0])}<br>${h(x.bn[1])}</button></div>`}
 
 function hub(){clearInterval(tm);
-A(`${topbar("CHOIX DE L’ÉPREUVE")}<div class="panel"><div class="grid">${E.map((x,i)=>`<button class="tile" style="--c:${x.c}" ${S.played.includes(i)||!x.ok?"disabled":""} onclick="pick(${i})"><em>${x.max}</em><span>${x.e}</span>${h(x.n.toUpperCase())}${x.ok?"":"<small>BIENTÔT</small>"}</button>`).join("")}</div></div>${S.mode==="libre"?`<div class="row"><button class="btn" onclick="finish()">Terminer la partie</button></div>`:""}`)}
+A(`${topbar("CHOIX DE L’ÉPREUVE")}<div class="panel"><div class="grid">${E.map((x,i)=>`<button class="tile" title="${h(x.d)}" style="--c:${x.c}" ${S.played.includes(i)||!x.ok?"disabled":""} onclick="pick(${i})"><em>${x.max}</em><span>${x.e}</span>${h(x.n.toUpperCase())}${x.ok?"":"<small>BIENTÔT</small>"}</button>`).join("")}</div></div><h3 class="sec">Tes bonus</h3><p class="mut">Chaque bonus s’utilise une fois par partie.</p><div class="panel bonus">${SB.map(([k,i,n,d])=>{const b=S.b[S.pi],on=k==="g"?b.g:b.m&&RESTE().length,st=k==="g"&&b.arm?"activé : prochaine épreuve ×2":b[k]?"disponible":"utilisé";return `<button class="bn info${b[k]?"":" used"}" ${on?"":"disabled"} onclick="${k==="g"?"useGonf()":"useMetro()"}" title="${h(d)}"><span>${i}</span>${n}<br>${h(d)}<br><b>${st}</b></button>`}).join("")}</div>${S.mode==="libre"?`<div class="row"><button class="btn" onclick="finish()">Terminer la partie</button></div>`:""}`)}
 
-function pick(i){S.ei=i;S.qs=sh(E[i].q).slice(0,E[i].nq);S.qi=0;S.got=0;ask()}
+function useGonf(){const b=S.b[S.pi];if(!b.g)return;b.g=0;b.arm=1;hub()}
 
-function ask(){clearInterval(tm);const x=E[S.ei],q=S.qs[S.qi];S.t=TIME;S.done=false;S.zero=false;
-A(`${topbar(h(x.n.toUpperCase()))}<div class="panel"><div class="bar"><div id="bar" style="width:100%"></div></div><p class="mut c" style="margin-top:8px">Question ${S.qi+1}/${S.qs.length} — ${x.pts} pts</p><p class="q">${h(q[0])}</p><input id="rep" autocomplete="off" placeholder="Ta réponse" onkeydown="if(event.key==='Enter')resp()"><p class="c" id="fb" style="min-height:22px"></p><div class="row"><button class="btn" onclick="resp()">Valider</button></div></div>${bonusBar(true)}`);
+function useMetro(){const b=S.b[S.pi],l=RESTE();if(!b.m||!l.length)return;b.m=0;const i=l[Math.floor(Math.random()*l.length)];
+A(`${topbar("MÉTRONOME")}<div class="panel c"><p class="q">⏱️ Métronome choisit une épreuve…</p><p class="q">${E[i].e} ${h(E[i].n)}</p></div>`);setTimeout(()=>pick(i),1600)}
+
+function pick(i){S.ei=i;S.qs=sh(E[i].q).slice(0,E[i].nq);S.qi=0;S.got=0;S.dbl=!!S.b[S.pi].arm;S.b[S.pi].arm=0;ask()}
+
+function ask(){clearInterval(tm);const x=E[S.ei],q=S.qs[S.qi];S.t=TIME;S.frozen=false;S.done=false;S.zero=false;
+A(`${topbar(h(x.n.toUpperCase()))}<div class="panel"><div class="bar"><div id="bar" style="width:100%"></div></div><p class="mut c">${h(x.d)}</p><p class="mut c" id="qn" style="margin-top:8px">Question ${S.qi+1}/${S.qs.length} — ${x.pts} pts${S.dbl?" ×2":""}</p><p class="q">${h(q[0])}</p><input id="rep" autocomplete="off" placeholder="Ta réponse" onkeydown="if(event.key==='Enter')resp()"><p class="c" id="fb" style="min-height:22px"></p><div class="row"><button class="btn" onclick="resp()">Valider</button></div></div>${bonusBar(true)}`);
 $("#rep").focus();
-tm=setInterval(()=>{S.t-=.25;$("#bar").style.width=S.t/TIME*100+"%";if(S.t<=0)resp(true)},250)}
+tm=setInterval(()=>{if(S.frozen)return;S.t-=.25;$("#bar").style.width=S.t/TIME*100+"%";if(S.t<=0)resp(true)},250)}
 
-function useB(){if(S.done||S.b[S.pi][S.ei])return;S.b[S.pi][S.ei]=1;S.zero=true;
+function useB(){if(S.done||S.b[S.pi].e[S.ei])return;S.b[S.pi].e[S.ei]=1;S.zero=true;
 $("#fb").innerHTML=`Réponse : <b>${h(S.qs[S.qi][1])}</b> (cette question ne rapporte aucun point)`;
 document.querySelectorAll(".bn").forEach(b=>b.disabled=true)}
 
 function resp(to){if(S.done)return;S.done=true;clearInterval(tm);const x=E[S.ei],q=S.qs[S.qi],v=norm($("#rep").value),ok=!to&&v&&q.slice(1).some(a=>norm(a)===v);
 $("#rep").disabled=true;document.querySelectorAll(".bn").forEach(b=>b.disabled=true);
-if(ok&&!S.zero){S.sc[S.pi]+=x.pts;S.got++}
-$("#fb").innerHTML=ok?`<span style="color:var(--ok)">Bonne réponse${S.zero?" (0 point, bonus utilisé)":" ! +"+x.pts}</span>`:`<span style="color:var(--ko)">${to?"Temps écoulé. ":"Raté. "}Réponse : ${h(q[1])}</span>`;
+const pp=x.pts*(S.dbl?2:1);if(ok&&!S.zero){S.sc[S.pi]+=pp;S.got++}
+$("#fb").innerHTML=ok?`<span style="color:var(--ok)">Bonne réponse${S.zero?" (0 point, bonus utilisé)":" ! +"+pp}</span>`:`<span style="color:var(--ko)">${to?"Temps écoulé. ":"Raté. "}Réponse : ${h(q[1])}</span>`;
 setTimeout(()=>{if(++S.qi<S.qs.length)ask();else endEp()},1600)}
 
 function endEp(){const multi=S.players.length>1;
@@ -125,7 +133,7 @@ A(`<div class="top"><div><small>QUIZ POKÉMON</small><h1>ACCUEIL</h1></div>${nav
 <div class="mode">⚔️<h2>Versus</h2>Jusqu’à 4 joueurs sur le même écran, mêmes questions, un seul gagnant.</div>
 <div class="mode">🏆<h2>Compétition</h2>${MAXE} épreuves, ton score entre dans le classement du site.</div></div>
 <h3 class="sec">Des épreuves pour tous les goûts</h3><div class="panel"><div class="grid">${E.map(x=>`<div class="tile mini" style="--c:${x.c}"><span>${x.e}</span>${x.n.toUpperCase()}</div>`).join("")}</div></div>
-<h3 class="sec">Un bonus par épreuve</h3><div class="panel"><table>${E.map(x=>`<tr><td>${x.e}</td><td>${h(x.n)}</td><td>${h(x.bn[0])}</td><td>${h(x.bn[1])}</td></tr>`).join("")}</table></div>
+<h3 class="sec">Un bonus par épreuve</h3><div class="panel"><table>${SB.map(([k,i,n,d])=>`<tr><td>${i}</td><td>Toute la partie</td><td>${n}</td><td>${h(d)}</td></tr>`).join("")}${E.map(x=>`<tr><td>${x.e}</td><td>${h(x.n)}</td><td>${h(x.bn[0])}</td><td>${h(x.bn[1])}</td></tr>`).join("")}</table></div>
 <h3 class="sec">Pourquoi créer un compte ?</h3><div class="panel"><table><tr><td>🏆</td><td>Accéder à la Compétition et apparaître dans le classement</td></tr><tr><td>💾</td><td>Garder ton record personnel du mode Libre</td></tr><tr><td>👤</td><td>Jouer sous ton pseudo à chaque visite</td></tr></table>${u?"":`<div class="row"><button class="btn" onclick="auth('up')">Créer mon compte</button></div>`}</div>`)}
 
 home();

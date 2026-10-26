@@ -39,3 +39,6 @@ input{background:#1d1a2e;border:2px solid var(--line);border-radius:10px;color:#
 .sec{font:900 22px Impact,sans-serif;margin:30px 0 10px}
 .tabs{display:flex;gap:8px;margin-bottom:10px}.tabs .btn{flex:1}.err{color:var(--ko);min-height:20px;font-size:14px}
 .mini{pointer-events:none}.mini span{font-size:26px}.mini{font-size:12px}
+
+.bonus{flex-wrap:wrap;gap:18px}.bn.info:disabled{opacity:.95;cursor:default}.bn.info{max-width:200px}
+.bn.used,.bn.used:disabled{opacity:.3;filter:grayscale(1)}
