@@ -11,7 +11,7 @@ const E=[
 ["Quel champion d’arène d’Argenta voyage avec Sacha au début ?","Pierre"],
 ["Quel Pokémon créé génétiquement est l’adversaire du premier film ?","Mewtwo"],
 ["Quel starter accompagne Liko dans Pokémon Horizons ?","Poussacha"]]},
-{n:"Les jeux et spin-off",d:"Questions sur les jeux et les spin-off",e:"🎮",c:"#d04a4a",max:10,pts:2,nq:5,bn:["Jackpot","Donne la réponse, sans point"],ok:true,q:[
+{n:"Game Master",d:"Questions sur les jeux et les spin-off",e:"🎮",c:"#d04a4a",max:10,pts:2,nq:5,bn:["Jackpot","Donne la réponse, sans point"],ok:true,q:[
 ["Dans quelle région se passent Pokémon Rouge et Bleu ?","Kanto"],
 ["Quel jeu permet de capturer des Pokémon en réalité augmentée ?","Pokémon GO","GO"],
 ["Sur quelle console est sorti Pokémon Colosseum ?","GameCube","Game Cube"],
@@ -19,9 +19,9 @@ const E=[
 ["Sur quelle console est sorti PokéPark ?","Wii"],
 ["Dans quelle région se passent Épée et Bouclier ?","Galar"],
 ["Dans quelle région se passent Écarlate et Violet ?","Paldea"]]},
-{n:"Le thème du Légendaire",d:"Retrouve le Légendaire grâce à son thème musical",e:"🎵",c:"#d0a82b",max:15,bn:["Clairvoyance","Affiche le ou les types"],ok:false,q:[]},
-{n:"Le type du Pokémon",d:"Donne un Pokémon qui a le type affiché",e:"🔥",c:"#d0662b",max:20,bn:["Multi-Type","Change le double type"],ok:false,q:[]},
-{n:"Les dresseurs importants",d:"Donne 3 Pokémon du dresseur affiché",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,q:[]}
+{n:"Légendes Sonores",d:"Retrouve le Légendaire grâce à son thème musical",e:"🎵",c:"#d0a82b",max:15,bn:["Clairvoyance","Affiche le ou les types"],ok:false,q:[]},
+{n:"Duel de Types",d:"Donne un Pokémon qui a le type affiché",e:"🔥",c:"#d0662b",max:20,bn:["Multi-Type","Change le double type"],ok:false,q:[]},
+{n:"Défis du Dresseur",d:"Donne 3 Pokémon du dresseur affiché",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,q:[]}
 ];
 const BI={"Clairvoyance":"🔮","Échange Psy":"🔄","Téléport":"🌀","Jackpot":"🎰","Multi-Type":"🌈","Détection":"🔍"};
 const SB=[["g","💪","Gonflette","Double les points de la prochaine épreuve que tu choisis"],["m","⏱️","Métronome","Choisit une épreuve au hasard à ta place"]];
