@@ -2,13 +2,18 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<!-- Adapte la page à la largeur du téléphone -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quiz Pokémon</title>
+<!-- Toute la mise en forme (couleurs, grille, boutons) est dans style.css -->
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!-- Conteneur unique : script.js y affiche tous les écrans (accueil, questions, résultats…) -->
 <div id="app"></div>
+<!-- 1) Les données de l'épreuve « Archives du Pokédex » (crée la variable ARCH). Doit être chargé AVANT script.js -->
 <script src="donnees-pokedex.js"></script>
+<!-- 2) Le jeu lui-même : règles, épreuves, écrans, comptes -->
 <script src="script.js"></script>
 </body>
 </html>
