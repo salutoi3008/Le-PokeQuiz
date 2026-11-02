@@ -50,7 +50,7 @@ const E=[
 ["Quels jeux Switch, avec Pikachu ou Évoli, reprennent Pokémon Rouge et Bleu ?", "Let’s Go", "Lets Go", "Pokémon Let’s Go"],
 ["Comment s’appelle l’application mobile de cartes à collectionner lancée fin 2024 ?", "Pokémon TCG Pocket", "TCG Pocket", "Pocket", "JCC Pocket"]]},
 {n:"Légendes Sonores",d:"Retrouve le Légendaire grâce à son thème musical",e:"🎵",c:"#d0a82b",max:15,bn:["Clairvoyance","Affiche le ou les types"],ok:false,q:[]},
-{n:"Duel de Types",d:"Donne un Pokémon qui a le type affiché",e:"🔥",c:"#d0662b",max:20,bn:["Multi-Type","Change le double type"],ok:false,q:[]},
+{n:"Duel de Types",d:"Donne un Pokémon qui a le type affiché",e:"🔥",c:"#d0662b",max:20,bn:["Multi-Type","Change le double type"],ok:true,duel:1,pts:5,mal:3,man:4,q:[]},
 {n:"Défis du Dresseur",d:"Donne 3 Pokémon du dresseur affiché",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,q:[]}
 ];
 const BI={"Clairvoyance":"🔮","Échange Psy":"🔄","Téléport":"🌀","Jackpot":"🎰","Multi-Type":"🌈","Détection":"🔍"};
@@ -60,6 +60,184 @@ const MAXE=E.filter(x=>x.ok).length,TIME=30;
 const norm=s=>String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"");
 const $=s=>document.querySelector(s),h=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const sh=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+/* ===== DUEL DE TYPES : base (type ou double type → Pokémon, formes comprises, noms français). Source : PokéAPI. ===== */
+/*DUEL-START*/
+const TYPES_D={"Poison/Plante":"Boustiflor|Bulbizarre|Chétiflor|Empiflor|Florizarre|Gaulet|Herbizarre|Mystherbe|Méga-Empiflor|Méga-Florizarre|Ortide|Rafflesia|Roserade|Rosélia|Rozbouton|Trompignon",
+"Feu":"Aflamanoir|Arcanin|Arceus|Caninos|Charbambin|Chartor|Chochodile|Crocogril|Darumacho|Darumarond|Entei|Feunard|Feunnec|Feurisson|Flamajou|Flambino|Flamiaou|Flamoutan|Galopa|Goupix|Gruikui|Héricendre|Lapyro|Limagma|Maganon|Magby|Magmar|Matoufeu|Morphéo|Ouisticram|Ponyta|Poussifeu|Pyrobut|Pyroli|Reptincel|Roussil|Salamèche|Silvallié|Typhlosion",
+"Vol/Feu":"Braisillon|Dracaufeu|Flambusard|Ho-Oh|Méga-Dracaufeu Y|Plumeline|Sulfura",
+"Eau":"Akwakwak|Aligatueur|Aquali|Arceus|Arrozard|Bargantua|Barpau|Canarbello|Carabaffe|Carapuce|Clamiral|Coiffeton|Concombaffe|Coquiperl|Crocrodil|Croâporal|Dofin|Embrochet|Flingouste|Flotajou|Flotoutan|Froussardine|Gamblast|Gobou|Grenousse|Hastacuda|Hypocéan|Hypotrempe|Kaiminus|Khélocrok|Kokiyas|Krabboss|Krabby|Kyogre|Larméléon|Lovdisc|Luminéon|Lézargus|Magicarpe|Mamanbo|Manaphy|Mateloutre|Milobellus|Morphéo|Moustillon|Mustébouée|Mustéflott|Méga-Tortank|Octillery|Otaquin|Otaria|Otarlette|Oyacata|Phione|Poissirène|Poissoroy|Primo-Kyogre|Prinplouf|Psykokwak|Ptitard|Rosabyss|Rémoraid|Sancoki|Serpang|Silvallié|Stari|Suicune|Superdofin|Tarpaud|Taupikeau|Tiplouf|Tortank|Triopikeau|Tritonde|Têtarte|Wailmer|Wailord|Écayon|Écrapince",
+"Insecte":"Arceus|Armulys|Blindalys|Carabing|Chenipan|Chenipotte|Cheniti|Chrysacier|Crikzik|Escargaume|Filentrappe|Larvadar|Larvibule|Lilliterelle|Limaspeed|Lumivole|Léboulérou|Lépidonille|Muciole|Mélokrik|Pomdepik|Pérégrain|Scarabrute|Silvallié|Tissenboule",
+"Vol/Insecte":"Apireine|Apitrini|Charmillon|Coxy|Coxyclaque|Insécateur|Maskadra|Méga-Scarabrute|Ninjask|Papilord|Papilusion|Prismillon|Scarabrute|Yanma|Yanmega",
+"Poison/Insecte":"Aspicot|Aéromite|Brutapode|Coconfort|Dardargnan|Migalos|Mimigal|Mimitoss|Méga-Brutapode|Méga-Dardargnan|Papinox|Rapion|Scobolide|Venipatte",
+"Normal/Vol":"Bazoucan|Canarticho|Colombeau|Dodrio|Doduo|Déflaisan|Furaiglon|Gueriaigle|Hoothoot|Hélédelle|Méga-Roucarnage|Nirondelle|Noarfang|Passerouge|Piafabec|Picassaut|Piclairon|Pijako|Poichigeon|Rapasdepic|Roucarnage|Roucool|Roucoups|Tapatoès|Tylton|Étouraptor|Étourmi|Étourvol",
+"Normal":"Arceus|Argouste|Brouhabam|Capidextre|Capumain|Cerfrousse|Chaffreux|Chaglam|Chinchidou|Chuchmur|Compagnol|Couafarel|Coudlangue|Delcatty|Deusolourdo|Dodoala|Excelangue|Famignol|Fouinar|Fouinette|Fragroin|Frison|Goinfrex|Gourmelet|Insolourdo|Kangourex|Kecleon|Keunotor|Laporeille|Leuphorie|Leveinard|Linéon|Lockpin|Manglouton|Mangriff|Mastouffe|Miaouss|Miradar|Monaflèmit|Morphéo|Moumouflon|Moumouton|Méga-Kangourex|Métamorph|Nanméouïe|Parecool|Pashmilla|Persian|Ponchien|Ponchiot|Porygon|Porygon-Z|Porygon2|Ptiravi|Queulorior|Ramboum|Ratentif|Rattata|Rattatac|Regigigas|Ronflex|Rongourmand|Rongrigou|Sapereau|Silvallié|Skitty|Spinda|Tauros|Teddiursa|Terapagos|Type:0|Ursaring|Vigoroth|Zigzaton|Écrémeuh|Évoli",
+"Poison":"Abo|Arbok|Arceus|Avaltout|Gloupti|Grotadmorv|Miamiasme|Miasmax|Nidoran♀|Nidoran♂|Nidorina|Nidorino|Silvallié|Smogo|Smogogo|Séviper|Tadmorv|Vémini",
+"Électrik":"Ampibidou|Anchwatt|Arceus|Câblifère|Dynavolt|Fulgudog|Lainergie|Lampéroie|Lixy|Luxio|Luxray|Méga-Ohmassacre|Méga-Raichu X|Méga-Raichu Y|Méga-Zeraora|Méga-Élecsprint|Négapi|Ohmassacre|Pachirisu|Pharamp|Pichu|Pikachu|Pohm|Posipi|Raichu|Raikou|Regieleki|Silvallié|Têtampoule|Voltali|Voltorbe|Voltoutou|Wattapik|Wattouat|Zeraora|Zébibron|Zéblitz|Élecsprint|Électrode|Élekable|Élekid|Élektek",
+"Sol":"Arceus|Bourrinos|Donphan|Dunaconda|Dunaja|Groudon|Hippodocus|Hippopotas|Kraknoix|Ossatueur|Osselait|Phanpy|Rototaupe|Sabelette|Sablaireau|Silvallié|Taupiqueur|Tiboudet|Triopikeur",
+"Poison/Sol":"Axoloto|Axoloto de Paldea|Nidoking|Nidoqueen|Terraiste",
+"Fée":"Arceus|Briochien|Charmilly|Cocotine|Crèmy|Cupcanaille|Flabébé|Floette|Florges|Fluvetin|Granbull|Guérilande|Méga-Floette|Mélo|Mélodelfe|Mélofée|Nymphali|Pâtachiot|Silvallié|Snubbull|Sucroquin|Togepi|Xerneas|Zacian",
+"Normal/Fée":"Azurill|Grodoudou|Méga-Nanméouïe|Nanméouïe|Rondoudou|Toudoudou",
+"Vol/Poison":"Nosferalto|Nosferapti|Nostenfer",
+"Insecte/Plante":"Cheniselle|Couverdure|Larveyette|Manternel|Paras|Parasect",
+"Combat":"Arceus|Bétochef|Canarticho|Canarticho de Galar|Charpenti|Colossinge|Crabagarre|Debugant|Férosinge|Hariyama|Hexadron|Judokrak|Kapoera|Karaclée|Kicklee|Krakos|Kungfouine|Machoc|Machopeur|Mackogneur|Makuhita|Méga-Hexadron|Ouvrifier|Palarticho|Pandespiègle|Poulpaf|Quartermac|Riolu|Shaofouine|Silvallié|Tauros|Tauros de Paldea|Tygnon|Wushours|Zamazenta",
+"Combat/Eau":"Keldeo|Palmaval|Shifours|Tartard|Tauros|Tauros de Paldea",
+"Psy":"Abra|Alakazam|Arceus|Bibichut|Chapotus|Cléopsytra|Cosmog|Cosmovum|Cresselia|Créfadet|Créfollet|Créhelf|Deoxys|Flotillon|Groret|Hypnomade|Kadabra|Korillon|Lewsor|Mentali|Mesmérella|Mew|Mewtwo|Mistigrix|Munna|Mushana|Méga-Alakazam|Méga-Mewtwo Y|Méga-Mistigrix|Méios|Necrozma|Neitram|Nucléos|Okéoké|Ponyta|Ponyta de Galar|Psystigri|Qulbutoké|Ramoloss|Ramoloss de Galar|Scrutella|Sidérella|Silvallié|Soporifik|Spoink|Symbios|Zarbi|Éoko",
+"Poison/Eau":"Prédastérie|Qwilfish|Tentacool|Tentacruel|Venalgue|Vorastérie",
+"Sol/Roche":"Embrylex|Gravalanch|Grolem|Onix|Racaillou|Rhinastoc|Rhinocorne|Rhinoféros|Ymphect",
+"Eau/Psy":"Denticrisse|Délestin|Flagadoss|Méga-Flagadoss|Méga-Staross|Ramoloss|Roigada|Staross",
+"Acier/Électrik":"Magnéti|Magnéton|Magnézone|Togedemaru",
+"Eau/Glace":"Crustabri|Hotte-de-Fer|Hydragla|Kaimorse|Lamantine|Lokhlass|Obalie|Phogleur",
+"Poison/Spectre":"Ectoplasma|Fantominus|Méga-Ectoplasma|Pêchaminus|Spectrum",
+"Plante/Psy":"Celebi|Noadkoko|Noeunoeuf|Sylveroy|Vert-de-Fer",
+"Plante":"Arceus|Arcko|Badabouin|Balignon|Blancoton|Boguérisse|Boskara|Bouldeneu|Cabriolaine|Cacnea|Candine|Ceribou|Ceriflor|Chevroum|Chlorobule|Croquine|Feuillajou|Feuiloutan|Floramantis|Fragilady|Germignon|Gorythmic|Grainipiot|Héliatronc|Joliflor|Jungko|Lianaja|Macronium|Majaspic|Maracachi|Marisson|Massko|Matourgeon|Mimantis|Méganium|Ogerpon|Ouistempo|Phyllali|Pimito|Poussacha|Saquedeneu|Shaymin|Silvallié|Sucreine|Tortipouss|Tournegrin|Tournicoton|Vipélierre|Vortente",
+"Psy/Fée":"Galopa|Galopa de Galar|Gardevoir|Hurle-Queue|Kirlia|M. Mime|Mime Jr.|Méga-Gardevoir|Sorcilence|Tarsal|Tokopiyon",
+"Psy/Glace":"Lippouti|Lippoutou|M. Glaquette|M. Mime|M. Mime de Galar|Sylveroy",
+"Vol/Eau":"Babimanta|Bekipan|Couaneton|Démanta|Goélise|Lakmécygne|Léviator|Nigosier",
+"Roche/Eau":"Amonistar|Amonita|Carapagos|Corayon|Golgopathe|Kabuto|Kabutops|Mégapagos|Opermine|Relicanth|Torgamord",
+"Vol/Roche":"Arkéapti|Aéroptéryx|Méga-Ptéra|Météno|Ptéra",
+"Vol/Glace":"Artikodin|Cadoizo",
+"Vol/Électrik":"Emolga|Fulgulairo|Fulguris|Motisma|Plumeline|Zapétrel|Électhor",
+"Dragon":"Arceus|Bébécaille|Carchacrok|Colimucus|Coupenotte|Draby|Drackhaus|Draco|Drakkarmin|Incisache|Minidraco|Mucuscule|Muplodocus|Méga-Carchacrok Z|Regidrago|Silvallié|Tranchodon",
+"Vol/Dragon":"Altaria|Bruyverne|Dracolosse|Drattak|Méga-Dracolosse|Méga-Drattak|Méga-Rayquaza|Rayquaza|Sonistrelle",
+"Eau/Électrik":"Lanturn|Loupio|Motisma",
+"Vol/Fée":"Amovénus|Méga-Mélodelfe|Mélodelfe|Togekiss|Togetic",
+"Vol/Psy":"Artikodin|Artikodin de Galar|Chovsourir|Cryptéro|Gueriaigle|Gueriaigle de Hisui|Lugia|Natu|Plumeline|Rhinolove|Xatu",
+"Eau/Fée":"Azumarill|Marill|Oratoria|Tokopisco",
+"Roche":"Amassel|Arceus|Charbi|Charkos|Craparoi|Dolman|Gigalithe|Gigansel|Géolithe|Kranidos|Lougaroc|Manzaï|Nodulithe|Regirock|Rocabot|Selutin|Silvallié|Simularbre|Tarinor",
+"Vol/Plante":"Brindibou|Cotovol|Efflèche|Floravol|Granivol|Shaymin|Tropius",
+"Sol/Eau":"Axoloto|Barbicha|Barloche|Batracné|Crapustule|Flobio|Laggron|Maraiste|Méga-Laggron|Tritosor",
+"Ténèbres":"Absol|Arceus|Chacripan|Darkrai|Dogrino|Goupilou|Grahyèna|Grondogue|Léopardus|Medhyèna|Miaouss|Miaouss d'Alola|Méga-Absol|Méga-Darkrai|Noctali|Persian|Persian d'Alola|Roublenard|Silvallié|Zoroark|Zorua",
+"Vol/Ténèbres":"Corboss|Cornèbre|Lestombaile|Sulfura|Sulfura de Galar|Têtes-de-Fer|Vaututrice|Vostourno|Yveltal",
+"Spectre":"Arceus|Branette|Corayon|Corayon de Galar|Corayôme|Feuforêve|Magirêve|Mordudor|Méga-Branette|Noctunoir|Polichombr|Polthégeist|Silvallié|Skelénox|Spectreval|Théffroi|Tomberro|Toutombe|Tutafeh|Tutankafer|Téraclope",
+"Normal/Psy":"Cerbyllin|Farigiraf|Girafarig|Gouroutan|Meloetta|Wimessir",
+"Insecte/Acier":"Cheniselle|Cizayox|Fermite|Foretress|Genesect|Lançargot|Méga-Cizayox|Méga-Sarmuraï|Sarmuraï",
+"Vol/Sol":"Démétéros|Scorplane|Scorvol",
+"Sol/Acier":"Limonde|Limonde de Galar|Minotaupe|Méga-Minotaupe|Méga-Steelix|Roue-de-Fer|Steelix|Taupiqueur|Taupiqueur d'Alola|Triopikeur|Triopikeur d'Alola",
+"Roche/Insecte":"Anorith|Armaldo|Caratroc|Crabaraque|Crabicoque|Hachécateur",
+"Combat/Insecte":"Cancrelove|Mouscoto|Méga-Scarhino|Rampe-Ailes|Scarhino",
+"Glace/Ténèbres":"Baojian|Dimoret|Farfuret",
+"Roche/Feu":"Arcanin|Arcanin de Hisui|Caninos|Caninos de Hisui|Monthracite|Volcaropod|Wagomine",
+"Sol/Glace":"Cochignon|Mammochon|Marcacrin",
+"Vol/Acier":"Airmure|Bamboiselle|Corvaillus|Méga-Airmure",
+"Feu/Ténèbres":"Démolosse|Félinferno|Malosse|Méga-Démolosse|Yuyu",
+"Eau/Dragon":"Aligatueur|Hydragon|Hyporoi|Méga-Aligatueur|Nigirigon|Palkia|Serpente-Eau",
+"Roche/Ténèbres":"Méga-Tyranocif|Tyranocif",
+"Combat/Feu":"Braségali|Chimpenfeu|Galifeu|Grotichon|Méga-Braségali|Méga-Roitiflam|Roitiflam|Simiabraz|Tauros|Tauros de Paldea",
+"Eau/Plante":"Lombre|Ludicolo|Nénupiot|Ogerpon",
+"Plante/Ténèbres":"Cacturne|Chongjian|Fongus-Furie|Miascarade|Pifeuil|Tengalice|Zarude",
+"Insecte/Eau":"Arakdo|Araqua|Sarmuraï|Sovkipou|Tarenbulle",
+"Combat/Plante":"Archéduc|Archéduc de Hisui|Blindépique|Chapignon|Fragilady|Fragilady de Hisui|Méga-Blindépique|Viridium",
+"Sol/Insecte":"Cheniselle|Ningale",
+"Insecte/Spectre":"Munja",
+"Spectre/Ténèbres":"Absol|Méga-Absol Z|Méga-Ténéfix|Spiritomb|Ténéfix",
+"Acier/Fée":"Forgelina|Forgella|Forgerette|Magearna|Mysdibule|Méga-Magearna|Méga-Mysdibule|Trousselin|Zacian",
+"Roche/Acier":"Ama-Ama|Bastiodon|Dinoclier|Galegon|Galekid|Galeking|Tarinorme",
+"Combat/Psy":"Charmina|Gallame|Mewtwo|Méditikka|Méga-Charmina|Méga-Gallame|Méga-Mewtwo X",
+"Eau/Ténèbres":"Amphinobi|Carvanha|Clamiral|Clamiral de Hisui|Colhomard|Léviator|Méga-Amphinobi|Méga-Léviator|Méga-Sharpedo|Sharpedo",
+"Sol/Feu":"Camérupt|Chamallot|Groudon|Méga-Camérupt|Primo-Groudon",
+"Sol/Dragon":"Carchacrok|Carmache|Griknot|Libégon|Méga-Carchacrok|Méga-Zygarde|Vibraninf|Zygarde",
+"Roche/Psy":"Roc-de-Fer|Solaroc|Séléroc",
+"Sol/Psy":"Balbuto|Kaorine",
+"Roche/Plante":"Lilia|Ogerpon|Vacilys",
+"Glace":"Arceus|Balbalèze|Bekaglaçon|Blizzeval|Darumacho|Darumacho de Galar|Darumarond|Darumarond de Galar|Givrali|Goupix|Goupix d'Alola|Grelaçon|Hexagel|Morphéo|Méga-Oniglali|Oniglali|Piétacé|Polagriffe|Polarhume|Regice|Silvallié|Sorbouboul|Sorboul|Sorbébé|Stalgamin|Séracrawl",
+"Acier/Psy":"Archéodong|Archéomire|Chef-de-Fer|Jirachi|Méga-Métalosse|Méga-Éoko|Métalosse|Métang|Necrozma|Solgaleo|Terhal|Éoko",
+"Acier":"Arceus|Berserkatt|Charibari|Clic|Cliticlic|Ferdeter|Galeking|Melmetal|Meltan|Miaouss|Miaouss de Galar|Méga-Galeking|Pachyradjah|Registeel|Silvallié|Tic",
+"Psy/Dragon":"Latias|Latios|Méga-Latias|Méga-Latios|Necrozma",
+"Sol/Plante":"Terracool|Terracruel|Torterra",
+"Acier/Eau":"Pingoléon",
+"Normal/Eau":"Castorno",
+"Vol/Spectre":"Baudrive|Grodrive|Plumeline",
+"Poison/Ténèbres":"Drascore|Grotadmorv|Grotadmorv d'Alola|Moufflair|Moufouette|Qwilfish|Qwilfish de Hisui|Qwilpik|Tadmorv|Tadmorv d'Alola",
+"Combat/Acier":"Cobaltium|Lucario|Méga-Lucario|Méga-Lucario Z|Zamazenta",
+"Combat/Poison":"Coatox|Cradopaud|Farfuret|Farfuret de Hisui|Farfurex|Félicanis",
+"Plante/Glace":"Blizzaroi|Blizzi|Méga-Blizzaroi",
+"Spectre/Glace":"Momartik|Méga-Momartik",
+"Spectre/Électrik":"Motisma",
+"Acier/Dragon":"Colimucus|Colimucus de Hisui|Dialga|Duralugon|Muplodocus|Muplodocus de Hisui|Pondralugon",
+"Acier/Feu":"Heatran|Méga-Heatran",
+"Spectre/Dragon":"Dispareptil|Fantyrm|Giratina|Lanssorien",
+"Feu/Psy":"Carmadura|Darumacho|Goupelin|Méga-Goupelin|Victini",
+"Plante/Fée":"Doudouvet|Farfaduvet|Lampignon|Méga-Méganium|Méganium|Spododo|Tokotoro",
+"Sol/Ténèbres":"Crocorible|Dinglu|Escroco|Mascaïman",
+"Combat/Ténèbres":"Baggaïd|Baggiguane|Méga-Baggaïd|Pandarbare|Shifours",
+"Normal/Plante":"Arboliva|Haydaim|Olivado|Olivini|Vivaldaim",
+"Spectre/Eau":"Moyade|Paragruel|Viskuse",
+"Insecte/Électrik":"Chrysapile|Lucanon|Mygavolt|Statitik",
+"Acier/Plante":"Grindur|Katagami|Noacier",
+"Spectre/Feu":"Flâmigator|Funécire|Lugulabre|Malvalame|Méga-Lugulabre|Mélancolux|Ossatueur|Ossatueur d'Alola|Pierroteknik|Typhlosion|Typhlosion de Hisui",
+"Sol/Électrik":"Limonde|Pelage-Sablé",
+"Sol/Spectre":"Bacabouh|Golemastoc|Gringolem|Méga-Golemastoc|Trépassable|Tutafeh|Tutafeh de Galar|Tutétékri",
+"Acier/Ténèbres":"Scalpereur|Scalpion|Scalproie",
+"Dragon/Ténèbres":"Diamat|Engloutyran|Rugit-Lune|Solochi|Trioxhydre",
+"Insecte/Feu":"Grillepattes|Pyrax|Pyronille|Scolocendre",
+"Combat/Roche":"Golgopathe|Méga-Golgopathe|Terrakium",
+"Vol":"Arceus|Bleuseille|Boréas|Minisange|Silvallié",
+"Feu/Dragon":"Boumata|Dracaufeu|Feu-Perçant|Méga-Dracaufeu X|Reshiram",
+"Électrik/Dragon":"Galvagon|Ire-Foudre|Miraidon|Méga-Pharamp|Pharamp|Zekrom",
+"Glace/Dragon":"Cryodo|Frigodo|Glaivodo|Kyurem|Méga-Glaivodo",
+"Normal/Sol":"Excavarenne|Ursaking",
+"Normal/Feu":"Hélionceau|Méga-Némélios|Némélios",
+"Spectre/Acier":"Dimoclès|Exagide|Gromago|Monorpale",
+"Psy/Ténèbres":"Hoopa|Méga-Sepiatroce|Sepiatop|Sepiatroce",
+"Poison/Dragon":"Kravarech|Mandrillon|Méga-Kravarech|Éthernatos",
+"Normal/Électrik":"Galvaran|Iguolta",
+"Roche/Dragon":"Ptyranidur|Rexillius",
+"Roche/Glace":"Amagara|Dragmara|Séracrawl|Séracrawl de Hisui",
+"Combat/Vol":"Brutalibré|Flamenroule|Méga-Brutalibré|Méga-Étouraptor|Électhor|Électhor de Galar|Étouraptor",
+"Électrik/Fée":"Dedenne|Tokorico",
+"Roche/Fée":"Diancie|Méga-Diancie|Strassie",
+"Spectre/Plante":"Archéduc|Banshitrouye|Brocélôme|Desséliande|Pitrouille|Poltchageist|Sinistrail|Théffroyable|Virevorreur|Virovent",
+"Spectre/Psy":"Hoopa|Lunala|Necrozma|Sylveroy",
+"Feu/Eau":"Volcanion",
+"Combat/Glace":"Crabominable|Méga-Crabominable",
+"Insecte/Fée":"Bombydou|Rubombelle",
+"Poison/Feu":"Malamandre|Mite-de-Fer|Tritox",
+"Normal/Combat":"Chelours|Lockpin|Meloetta|Méga-Lockpin|Nounourson",
+"Spectre/Fée":"Flotte-Mèche|Mimiqui",
+"Normal/Dragon":"Draïeul|Motorizard|Méga-Draïeul",
+"Combat/Dragon":"Koraidon|Écaïd|Ékaïser",
+"Poison/Roche":"Floréclat|Germéclat|Méga-Floréclat|Zéroïd",
+"Combat/Spectre":"Courrousinge|Marshadow",
+"Insecte/Psy":"Astronelle|Bérasca|Coléodôme",
+"Plante/Dragon":"Dratatin|Jungko|Méga-Jungko|Noadkoko|Noadkoko d'Alola|Pomdorochi|Pomdramour|Pomdrapi|Verpom",
+"Poison/Électrik":"Salarsen|Toxizap",
+"Ténèbres/Fée":"Angoliath|Fourbelin|Grimalin",
+"Normal/Ténèbres":"Ixon|Linéon|Linéon de Galar|Rattata|Rattata d'Alola|Rattatac|Rattatac d'Alola|Zigzaton|Zigzaton de Galar",
+"Insecte/Glace":"Beldeneige|Frissonille",
+"Électrik/Ténèbres":"Morpeko",
+"Électrik/Glace":"Galvagla|Motisma",
+"Insecte/Ténèbres":"Gambex",
+"Combat/Électrik":"Paume-de-Fer|Pohmarmotte|Pohmotte",
+"Normal/Poison":"Gribouraigne|Tag-Tag",
+"Feu/Plante":"Méga-Scovilain|Ogerpon|Scovilain",
+"Poison/Acier":"Vrombi|Vrombotor",
+"Combat/Sol":"Fort-Ivoire",
+"Roche/Électrik":"Gravalanch|Gravalanch d'Alola|Grolem|Grolem d'Alola|Racaillou|Racaillou d'Alola|Épine-de-Fer",
+"Combat/Fée":"Garde-de-Fer",
+"Poison/Psy":"Flagadoss|Flagadoss de Galar|Fortusimia|Roigada|Roigada de Galar",
+"Poison/Fée":"Favianos|Smogogo|Smogogo de Galar",
+"Feu/Électrik":"Motisma",
+"Plante/Électrik":"Motisma|Voltorbe|Voltorbe de Hisui|Électrode|Électrode de Hisui",
+"Dragon/Fée":"Altaria|Méga-Altaria",
+"Électrik/Psy":"Raichu|Raichu d'Alola",
+"Acier/Glace":"Sabelette|Sabelette d'Alola|Sablaireau|Sablaireau d'Alola",
+"Glace/Fée":"Feunard|Feunard d'Alola",
+"Feu/Glace":"Darumacho|Darumacho de Galar",
+"Normal/Spectre":"Zoroark|Zoroark de Hisui|Zorua|Zorua de Hisui"};
+const TY={"Normal":"#a8a878","Combat":"#c03028","Vol":"#a890f0","Poison":"#a040a0","Sol":"#c9a84a","Roche":"#b8a038","Insecte":"#a8b820","Spectre":"#705898","Acier":"#9a9ab8","Feu":"#f08030","Eau":"#6890f0","Plante":"#78c850","Électrik":"#e0b800","Psy":"#f85888","Glace":"#7cc8c8","Dragon":"#7038f8","Ténèbres":"#705848","Fée":"#e0829a"};
+const TYL=Object.keys(TY);
+let TIDX=null;
+function tidx(){if(TIDX)return TIDX;TIDX={noms:new Map(),dbl:[]};
+for(const k in TYPES_D){const ts=k.split("/");if(ts.length===2)TIDX.dbl.push(ts);
+for(const n of TYPES_D[k].split("|")){const z=norm(n);if(!TIDX.noms.has(z))TIDX.noms.set(z,[]);TIDX.noms.get(z).push(ts)}}
+return TIDX}
+/* cible = [type] (le Pokémon doit avoir ce type) ou [type1,type2] (il doit avoir exactement ces deux types, dans n’importe quel ordre) */
+const duelMatch=(ts,c)=>c.length===1?ts.includes(c[0]):ts.length===2&&c.every(t=>ts.includes(t));
+function duelOk(rep,c){const l=tidx().noms.get(norm(rep));return !!l&&l.some(ts=>duelMatch(ts,c))}
+function exemple(c){const l=[];for(const k in TYPES_D)if(duelMatch(k.split("/"),c))l.push(...TYPES_D[k].split("|").filter(n=>n!=="Arceus"&&n!=="Silvallié"));return l[Math.random()*l.length|0]}
+function duelType(){if(Math.random()<.5){const d=tidx().dbl;return [...d[Math.random()*d.length|0]]}return [TYL[Math.random()*TYL.length|0]]}
+function multiType(c){const d=tidx().dbl.filter(ts=>ts.some(t=>c.includes(t))&&!(c.length===2&&c.every(t=>ts.includes(t))));return d.length?[...d[Math.random()*d.length|0]]:c}
+/*DUEL-END*/
 const ls={get:(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 /* Serveur : comptes et classement. Remplacer l’adresse par celle du serveur une fois hébergé en ligne. */
 const SERVEUR="https://pokequiz-serveur.onrender.com";
@@ -100,14 +278,17 @@ function useGonf(){const b=S.b[S.pi];if(!b.g)return;b.g=0;b.arm=1;hub()}
 function useMetro(){const b=S.b[S.pi],l=RESTE();if(!b.m||!l.length)return;b.m=0;const i=l[Math.floor(Math.random()*l.length)];
 A(`${topbar("MÉTRONOME")}<div class="panel c"><p class="q">⏱️ Métronome choisit une épreuve…</p><p class="q">${E[i].e} ${h(E[i].n)}</p></div>`);setTimeout(()=>pick(i),1600)}
 
-function pick(i){S.ei=i;S.qs=sh(E[i].q).slice(0,E[i].nq);S.qi=0;S.got=0;S.dbl=!!S.b[S.pi].arm;S.b[S.pi].arm=0;ask()}
+function pick(i){S.ei=i;S.qi=0;S.got=0;S.dbl=!!S.b[S.pi].arm;S.b[S.pi].arm=0;
+/* en Versus, tous les joueurs reçoivent les mêmes questions / les mêmes types */
+if(!(S.players.length>1&&S.pi>0&&S.qsEi===i)){S.qs0=E[i].duel?Array.from({length:E[i].man},duelType):sh(E[i].q).slice(0,E[i].nq);S.qsEi=i}
+S.qs=S.qs0;E[i].duel?askD():ask()}
 
 function ask(){clearInterval(tm);const x=E[S.ei],q=S.qs[S.qi];S.t=TIME;S.frozen=false;S.done=false;S.zero=false;
 A(`${topbar(h(x.n.toUpperCase()))}<div class="panel"><div class="bar"><div id="bar" style="width:100%"></div></div><p class="mut c">${h(x.d)}</p><p class="mut c" id="qn" style="margin-top:8px">Question ${S.qi+1}/${S.qs.length} — ${x.pts} pts${S.dbl?" ×2":""}</p><p class="q">${h(q[0])}</p><input id="rep" autocomplete="off" placeholder="Ta réponse" onkeydown="if(event.key==='Enter')resp()"><p class="c" id="fb" style="min-height:22px"></p><div class="row"><button class="btn" onclick="resp()">Valider</button></div></div>${bonusBar(true)}`);
 $("#rep").focus();
 tm=setInterval(()=>{if(S.frozen)return;S.t-=.25;$("#bar").style.width=S.t/TIME*100+"%";if(S.t<=0)resp(true)},250)}
 
-function useB(){if(S.done||S.b[S.pi].e[S.ei])return;S.b[S.pi].e[S.ei]=1;S.zero=true;
+function useB(){if(S.done||S.b[S.pi].e[S.ei])return;S.b[S.pi].e[S.ei]=1;if(E[S.ei].duel)return multiT();S.zero=true;
 $("#fb").innerHTML=`Réponse : <b>${h(S.qs[S.qi][1])}</b> (cette question ne rapporte aucun point)`;
 document.querySelectorAll(".bn").forEach(b=>b.disabled=true)}
 
@@ -116,6 +297,22 @@ $("#rep").disabled=true;document.querySelectorAll(".bn").forEach(b=>b.disabled=t
 const pp=x.pts*(S.dbl?2:1);if(ok&&!S.zero){S.sc[S.pi]+=pp;S.got++}
 $("#fb").innerHTML=ok?`<span style="color:var(--ok)">Bonne réponse${S.zero?" (0 point, bonus utilisé)":" ! +"+pp}</span>`:`<span style="color:var(--ko)">${to?"Temps écoulé. ":"Raté. "}Réponse : ${h(q[1])}</span>`;
 setTimeout(()=>{if(++S.qi<S.qs.length)ask();else endEp()},1600)}
+
+/* ----- Épreuve Duel de Types : +5 si bonne réponse, −3 sinon (le score peut descendre sous zéro) ----- */
+const tpHtml=c=>c.map(t=>`<span style="display:inline-block;margin:4px 6px;padding:10px 22px;border-radius:999px;background:${TY[t]};color:#fff;text-shadow:0 1px 3px #000a;font:900 24px Impact,sans-serif">${h(t.toUpperCase())}</span>`).join("");
+
+function askD(){clearInterval(tm);const x=E[S.ei];S.cur=[...S.qs[S.qi]];S.t=TIME;S.frozen=false;S.done=false;
+A(`${topbar(h(x.n.toUpperCase()))}<div class="panel"><div class="bar"><div id="bar" style="width:100%"></div></div><p class="mut c">${h(x.d)}</p><p class="mut c" style="margin-top:8px">Manche ${S.qi+1}/${S.qs.length} — +${x.pts} si juste, −${x.mal} si faux${S.dbl?" (×2)":""}</p><div class="c" id="tp" style="margin:18px 0">${tpHtml(S.cur)}</div><input id="rep" autocomplete="off" placeholder="Nom d’un Pokémon" onkeydown="if(event.key==='Enter')respD()"><p class="c" id="fb" style="min-height:22px"></p><div class="row"><button class="btn" onclick="respD()">Valider</button></div></div>${bonusBar(true)}`);
+$("#rep").focus();
+tm=setInterval(()=>{if(S.frozen)return;S.t-=.25;$("#bar").style.width=S.t/TIME*100+"%";if(S.t<=0)respD(true)},250)}
+
+function multiT(){S.cur=multiType(S.cur);$("#tp").innerHTML=tpHtml(S.cur);document.querySelectorAll(".bn").forEach(b=>b.disabled=true)}
+
+function respD(to){const v=$("#rep").value.trim();if(S.done||(!to&&!v))return;S.done=true;clearInterval(tm);const x=E[S.ei],m=S.dbl?2:1,ok=!to&&duelOk(v,S.cur),pp=ok?x.pts*m:-x.mal*m;
+$("#rep").disabled=true;document.querySelectorAll(".bn").forEach(b=>b.disabled=true);
+S.sc[S.pi]+=pp;if(ok)S.got++;
+$("#fb").innerHTML=ok?`<span style="color:var(--ok)">Bonne réponse ! +${pp}</span>`:`<span style="color:var(--ko)">${to?"Temps écoulé. ":"Raté. "}${pp} pts. Exemple : ${h(exemple(S.cur))}</span>`;
+setTimeout(()=>{if(++S.qi<S.qs.length)askD();else endEp()},1600)}
 
 function endEp(){const multi=S.players.length>1;
 if(multi&&S.pi<S.players.length-1){S.pi++;return turn()}
