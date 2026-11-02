@@ -1,7 +1,7 @@
 /* ===== ÉPREUVES (cahier des charges). ok:false = pas encore jouable. q: [question, bonne réponse, autres réponses acceptées…] ===== */
 const E=[
 {n:"Écho Sauvage",d:"Retrouve le Pokémon grâce à son cri",e:"🔊",c:"#3d6fd0",max:15,bn:["Clairvoyance","Affiche le type (manche 4)"],ok:false,q:[]},
-{n:"Les Archives du Pokédex",d:"Retrouve le Pokémon grâce à sa description",e:"📖",c:"#2fa36b",max:9,bn:["Échange Psy","Change la description"],ok:false,q:[]},
+{n:"Les Archives du Pokédex",d:"Retrouve le Pokémon grâce à sa description",e:"📖",c:"#2fa36b",max:9,pts:3,nq:3,arch:1,bn:["Échange Psy","Change la description"],ok:false,q:[]},
 {n:"Carte au Trésor",d:"Retrouve le jeu d’où provient le lieu",e:"📍",c:"#2a9bb0",max:6,bn:["Téléport","Change le lieu"],ok:false,q:[]},
 {n:"Anime Attitude",d:"Questions sur l’anime Pokémon",e:"📺",c:"#c04aa0",max:10,pts:2,nq:5,bn:["Jackpot","Donne la réponse, sans point"],ok:true,q:[
 ["Quel est le Pokémon de départ de Sacha dans la série ?", "Pikachu"],
@@ -53,6 +53,9 @@ const E=[
 {n:"Duel de Types",d:"Donne un Pokémon qui a le type affiché",e:"🔥",c:"#d0662b",max:20,bn:["Multi-Type","Change le double type"],ok:true,duel:1,pts:5,mal:3,man:4,q:[]},
 {n:"Défis du Dresseur",d:"Donne 3 Pokémon du dresseur affiché",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,q:[]}
 ];
+/* Archives du Pokédex : les descriptions viennent du fichier donnees-pokedex.js (l’épreuve reste « bientôt » si ce fichier est absent). */
+const GEN={};
+if(typeof ARCH!=="undefined"){const x=E.find(e=>e.arch);x.q=ARCH.flatMap(([n,g,ds])=>{GEN[n]=g;return ds.map(d=>[d,n])});x.ok=true}
 const BI={"Clairvoyance":"🔮","Échange Psy":"🔄","Téléport":"🌀","Jackpot":"🎰","Multi-Type":"🌈","Détection":"🔍"};
 const SB=[["g","💪","Gonflette","Double les points de la prochaine épreuve que tu choisis"],["m","⏱️","Métronome","Choisit une épreuve au hasard à ta place"]];
 const RESTE=()=>E.map((x,i)=>i).filter(i=>E[i].ok&&!S.played.includes(i));
@@ -284,11 +287,11 @@ if(!(S.players.length>1&&S.pi>0&&S.qsEi===i)){S.qs0=E[i].duel?Array.from({length
 S.qs=S.qs0;E[i].duel?askD():ask()}
 
 function ask(){clearInterval(tm);const x=E[S.ei],q=S.qs[S.qi];S.t=TIME;S.frozen=false;S.done=false;S.zero=false;
-A(`${topbar(h(x.n.toUpperCase()))}<div class="panel"><div class="bar"><div id="bar" style="width:100%"></div></div><p class="mut c">${h(x.d)}</p><p class="mut c" id="qn" style="margin-top:8px">Question ${S.qi+1}/${S.qs.length} — ${x.pts} pts${S.dbl?" ×2":""}</p><p class="q">${h(q[0])}</p><input id="rep" autocomplete="off" placeholder="Ta réponse" onkeydown="if(event.key==='Enter')resp()"><p class="c" id="fb" style="min-height:22px"></p><div class="row"><button class="btn" onclick="resp()">Valider</button></div></div>${bonusBar(true)}`);
+A(`${topbar(h(x.n.toUpperCase()))}<div class="panel"><div class="bar"><div id="bar" style="width:100%"></div></div><p class="mut c">${h(x.d)}</p><p class="mut c" id="qn" style="margin-top:8px">Question ${S.qi+1}/${S.qs.length} — ${x.pts} pts${S.dbl?" ×2":""}</p><p class="q" id="qt"${x.arch?' style="font-size:19px"':""}>${h(q[0])}</p>${x.arch?'<div class="c"><button class="btn alt" id="gen" onclick="showGen()">🎓 Génération ?</button></div>':""}<input id="rep" autocomplete="off" placeholder="Ta réponse" onkeydown="if(event.key==='Enter')resp()"><p class="c" id="fb" style="min-height:22px"></p><div class="row"><button class="btn" onclick="resp()">Valider</button></div></div>${bonusBar(true)}`);
 $("#rep").focus();
 tm=setInterval(()=>{if(S.frozen)return;S.t-=.25;$("#bar").style.width=S.t/TIME*100+"%";if(S.t<=0)resp(true)},250)}
 
-function useB(){if(S.done||S.b[S.pi].e[S.ei])return;S.b[S.pi].e[S.ei]=1;if(E[S.ei].duel)return multiT();S.zero=true;
+function useB(){if(S.done||S.b[S.pi].e[S.ei])return;S.b[S.pi].e[S.ei]=1;if(E[S.ei].duel)return multiT();if(E[S.ei].arch)return swapQ();S.zero=true;
 $("#fb").innerHTML=`Réponse : <b>${h(S.qs[S.qi][1])}</b> (cette question ne rapporte aucun point)`;
 document.querySelectorAll(".bn").forEach(b=>b.disabled=true)}
 
@@ -297,6 +300,12 @@ $("#rep").disabled=true;document.querySelectorAll(".bn").forEach(b=>b.disabled=t
 const pp=x.pts*(S.dbl?2:1);if(ok&&!S.zero){S.sc[S.pi]+=pp;S.got++}
 $("#fb").innerHTML=ok?`<span style="color:var(--ok)">Bonne réponse${S.zero?" (0 point, bonus utilisé)":" ! +"+pp}</span>`:`<span style="color:var(--ko)">${to?"Temps écoulé. ":"Raté. "}Réponse : ${h(q[1])}</span>`;
 setTimeout(()=>{if(++S.qi<S.qs.length)ask();else endEp()},1600)}
+
+/* ----- Épreuve Archives du Pokédex : badge génération et bonus Échange Psy ----- */
+function showGen(){const b=$("#gen");b.textContent="Génération "+GEN[S.qs[S.qi][1]];b.disabled=true}
+function swapQ(){const used=S.qs.map(q=>q[0]),pool=E[S.ei].q.filter(q=>!used.includes(q[0])),n=pool[Math.random()*pool.length|0];
+S.qs=[...S.qs];S.qs[S.qi]=n;S.t=TIME;$("#qt").textContent=n[0];const g=$("#gen");g.textContent="🎓 Génération ?";g.disabled=false;$("#fb").innerHTML="";
+document.querySelectorAll(".bn").forEach(b=>b.disabled=true)}
 
 /* ----- Épreuve Duel de Types : +5 si bonne réponse, −3 sinon (le score peut descendre sous zéro) ----- */
 const tpHtml=c=>c.map(t=>`<span style="display:inline-block;margin:4px 6px;padding:10px 22px;border-radius:999px;background:${TY[t]};color:#fff;text-shadow:0 1px 3px #000a;font:900 24px Impact,sans-serif">${h(t.toUpperCase())}</span>`).join("");
