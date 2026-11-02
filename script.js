@@ -19,7 +19,7 @@
 // puis, si elle n’est pas un simple « question → réponse tapée », écris ses
 // fonctions ask…/resp… (voir askD/respD pour l’exemple du Duel de Types) et
 // ajoute un « if » dans pick() et useB().
-// Le fichier donnees-pokedex.js (chargé avant celui-ci) fournit la variable ARCH.
+// Les fichiers donnees-pokedex.js (variable ARCH) et donnees-echo.js (variable ECHO) sont chargés avant celui-ci.
 // ==========================================================================
 /* ===== ÉPREUVES (cahier des charges). ok:false = pas encore jouable. q: [question, bonne réponse, autres réponses acceptées…] ===== */
 // Chaque épreuve est un objet avec ces champs :
@@ -32,7 +32,9 @@
 // Champs spéciaux : duel:1 (+ mal = points perdus, man = nombre de manches) pour le
 // Duel de Types ; arch:1 pour les Archives du Pokédex (questions chargées depuis ARCH).
 const E=[
-{n:"Écho Sauvage",d:"Retrouve le Pokémon grâce à son cri",e:"🔊",c:"#3d6fd0",max:15,bn:["Clairvoyance","Affiche le type (manche 4)"],ok:false,q:[]},
+// Épreuve 1 : echo:1 = règles spéciales (askE/respE). man = 4 manches ; pm = points de chaque manche ;
+// nc = nombre de propositions par manche (0 = le joueur tape le nom) ; pc = points de la manche 4 avec Clairvoyance.
+{n:"Écho Sauvage",d:"Retrouve le Pokémon grâce à son cri",e:"🔊",c:"#3d6fd0",max:15,bn:["Clairvoyance","Affiche le type (manche 4)"],ok:false,echo:1,man:4,pm:[2,3,4,6],nc:[3,4,4,0],pc:3,q:[]},
 // Épreuve 2 : q reste vide ici, il est rempli plus bas à partir de donnees-pokedex.js (ARCH).
 {n:"Les Archives du Pokédex",d:"Retrouve le Pokémon grâce à sa description",e:"📖",c:"#2fa36b",max:9,pts:3,nq:3,arch:1,bn:["Échange Psy","Change la description"],ok:false,q:[]},
 {n:"Carte au Trésor",d:"Retrouve le jeu d’où provient le lieu",e:"📍",c:"#2a9bb0",max:6,bn:["Téléport","Change le lieu"],ok:false,q:[]},
@@ -96,6 +98,8 @@ const E=[
 //   - x.q       : liste de questions [description, nom] (même format que les autres épreuves)
 // Si donnees-pokedex.js est absent, ARCH n’existe pas : l’épreuve reste grisée.
 const GEN={};
+// Écho Sauvage : jouable seulement si donnees-echo.js est chargé (il crée la variable ECHO).
+if(typeof ECHO!=="undefined")E.find(e=>e.echo).ok=true;
 if(typeof ARCH!=="undefined"){const x=E.find(e=>e.arch);x.q=ARCH.flatMap(([n,g,ds])=>{GEN[n]=g;return ds.map(d=>[d,n])});x.ok=true}
 // BI : emoji de chaque bonus d’épreuve (affiché dans le bouton de bonus).
 const BI={"Clairvoyance":"🔮","Échange Psy":"🔄","Téléport":"🌀","Jackpot":"🎰","Multi-Type":"🌈","Détection":"🔍"};
@@ -316,7 +320,8 @@ const API={async save(n,s){await srv("/scores",{mode:"Compétition",points:s})},
 //   mode (libre/versus/compet), players (pseudos), sc (scores), pi (joueur actuel),
 //   b (bonus restants de chaque joueur), played (épreuves terminées),
 //   ei (épreuve en cours), qs (questions de l’épreuve), qi (numéro de question),
-//   dbl (Gonflette active), cur (cible du Duel), done / zero / t (état de la question).
+//   dbl (Gonflette active), cur (cible du Duel), done / zero / t (état de la question),
+//   aud (cri en cours de lecture), half (Clairvoyance utilisée).
 // tm = le minuteur (setInterval) de la question en cours.
 let S,tm;
 // A(html) : affiche un écran = remplace tout le contenu de #app.
@@ -367,8 +372,8 @@ A(`${topbar("MÉTRONOME")}<div class="panel c"><p class="q">⏱️ Métronome ch
 // classiques) ou askD() (Duel de Types). En Versus, les joueurs suivants reçoivent les mêmes questions.
 function pick(i){S.ei=i;S.qi=0;S.got=0;S.dbl=!!S.b[S.pi].arm;S.b[S.pi].arm=0;
 /* en Versus, tous les joueurs reçoivent les mêmes questions / les mêmes types */
-if(!(S.players.length>1&&S.pi>0&&S.qsEi===i)){S.qs0=E[i].duel?Array.from({length:E[i].man},duelType):sh(E[i].q).slice(0,E[i].nq);S.qsEi=i}
-S.qs=S.qs0;E[i].duel?askD():ask()}
+if(!(S.players.length>1&&S.pi>0&&S.qsEi===i)){S.qs0=E[i].duel?Array.from({length:E[i].man},duelType):E[i].echo?echoManches():sh(E[i].q).slice(0,E[i].nq);S.qsEi=i}
+S.qs=S.qs0;E[i].duel?askD():E[i].echo?askE():ask()}
 
 // ask() : affiche UNE question classique (texte, champ de réponse, barre de temps, bonus) et lance le chrono.
 function ask(){clearInterval(tm);const x=E[S.ei],q=S.qs[S.qi];S.t=TIME;S.frozen=false;S.done=false;S.zero=false;
@@ -378,7 +383,7 @@ tm=setInterval(()=>{if(S.frozen)return;S.t-=.25;$("#bar").style.width=S.t/TIME*1
 
 // useB() : le joueur clique sur le bonus de l’épreuve. Chaque épreuve a son effet :
 // Duel → multiT() ; Archives → swapQ() ; sinon (Jackpot) : montre la réponse, la question vaut 0 point.
-function useB(){if(S.done||S.b[S.pi].e[S.ei])return;S.b[S.pi].e[S.ei]=1;if(E[S.ei].duel)return multiT();if(E[S.ei].arch)return swapQ();S.zero=true;
+function useB(){if(S.done||S.b[S.pi].e[S.ei])return;S.b[S.pi].e[S.ei]=1;if(E[S.ei].duel)return multiT();if(E[S.ei].arch)return swapQ();if(E[S.ei].echo)return clair();S.zero=true;
 $("#fb").innerHTML=`Réponse : <b>${h(S.qs[S.qi][1])}</b> (cette question ne rapporte aucun point)`;
 document.querySelectorAll(".bn").forEach(b=>b.disabled=true)}
 
@@ -396,6 +401,77 @@ function showGen(){const b=$("#gen");b.textContent="Génération "+GEN[S.qs[S.qi
 function swapQ(){const used=S.qs.map(q=>q[0]),pool=E[S.ei].q.filter(q=>!used.includes(q[0])),n=pool[Math.random()*pool.length|0];
 S.qs=[...S.qs];S.qs[S.qi]=n;S.t=TIME;$("#qt").textContent=n[0];const g=$("#gen");g.textContent="🎓 Génération ?";g.disabled=false;$("#fb").innerHTML="";
 document.querySelectorAll(".bn").forEach(b=>b.disabled=true)}
+
+// ===================== Épreuve 1 : ÉCHO SAUVAGE =====================
+// Déroulement : 4 manches. On écoute le cri d’un Pokémon (réécoute illimitée) :
+//   manches 1 à 3 : on choisit parmi 3 puis 4 puis 4 propositions (sprite + nom) ;
+//   manche 4      : on tape le nom. Points : 2 / 3 / 4 / 6.
+// Bonus Clairvoyance (manche 4 seulement) : affiche le ou les types, mais la manche ne rapporte plus que 3 points.
+// Données : ECHO (donnees-echo.js) = [[numéro Pokédex, nom, types], …].
+
+// Adresses du cri audio et du sprite d’un Pokémon, d’après son numéro de Pokédex.
+// Pour héberger les fichiers toi-même, change seulement ces deux lignes.
+const CRI=id=>`https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${id}.ogg`;
+const SPR=id=>`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+
+// echoManches() : prépare les 4 manches de l’épreuve (appelée une seule fois par pick(),
+// donc tous les joueurs du Versus entendent les mêmes cris).
+// Une manche = { p : le Pokémon à trouver [numéro, nom, types], ch : les propositions mélangées }.
+function echoManches(){
+  const x=E.find(e=>e.echo),cibles=sh(ECHO).slice(0,x.man);   // 4 Pokémon différents tirés au hasard
+  return cibles.map((p,m)=>{
+    const n=x.nc[m];                                           // nombre de propositions de cette manche
+    if(!n)return {p,ch:[]};                                    // manche 4 : aucune proposition (saisie)
+    const autres=sh(ECHO.filter(o=>o[0]!==p[0])).slice(0,n-1); // les mauvaises réponses
+    return {p,ch:sh([p,...autres])}                            // bonne réponse + mauvaises, dans le désordre
+  })
+}
+
+// cri() : joue (ou rejoue) le cri de la manche en cours. Le catch évite une erreur si le navigateur bloque le son.
+function cri(){if(S.aud)S.aud.pause();S.aud=new Audio(CRI(S.qs[S.qi].p[0]));S.aud.play().catch(()=>{})}
+
+// askE() : affiche UNE manche (cri, propositions ou champ de saisie, bonus) et lance le chrono.
+function askE(){
+  clearInterval(tm);if(S.aud)S.aud.pause();
+  const x=E[S.ei],m=S.qs[S.qi],last=!m.ch.length;              // last = manche 4 (pas de propositions)
+  S.t=TIME;S.frozen=false;S.done=false;S.half=false;           // half = Clairvoyance utilisée
+  // zone de réponse : champ de saisie (manche 4) ou boutons avec le sprite de chaque proposition
+  const zone=last
+    ?`<input id="rep" autocomplete="off" placeholder="Nom du Pokémon" onkeydown="if(event.key==='Enter')respE()"><div class="row"><button class="btn" onclick="respE()">Valider</button></div>`
+    :`<div class="opts">${m.ch.map((o,i)=>`<button class="opt" onclick="respE(${i})"><img src="${SPR(o[0])}" alt="" width="72" height="72" style="display:block;margin:0 auto 6px;image-rendering:pixelated">${h(o[1])}</button>`).join("")}</div>`;
+  A(`${topbar(h(x.n.toUpperCase()))}<div class="panel"><div class="bar"><div id="bar" style="width:100%"></div></div><p class="mut c">${h(x.d)}</p><p class="mut c" style="margin-top:8px">Manche ${S.qi+1}/${S.qs.length} — <span id="pts">${x.pm[S.qi]*(S.dbl?2:1)}</span> pts${S.dbl?" (×2)":""}</p><div class="c" style="margin:16px 0"><button class="btn" onclick="cri()">🔊 Écouter le cri</button></div><div class="c" id="tp"></div>${zone}<p class="c" id="fb" style="min-height:22px;margin-top:10px"></p></div>${bonusBar(last)}`);
+  if(last)$("#rep").focus();
+  cri();                                                       // le cri démarre tout seul
+  tm=setInterval(()=>{if(S.frozen)return;S.t-=.25;$("#bar").style.width=S.t/TIME*100+"%";if(S.t<=0)respE(undefined,true)},250)
+}
+
+// clair() : bonus Clairvoyance (manche 4) → affiche les types du Pokémon et fait passer la manche à pc points.
+function clair(){
+  S.half=true;
+  $("#tp").innerHTML=tpHtml(S.qs[S.qi].p[2].split("/"));
+  $("#pts").textContent=E[S.ei].pc*(S.dbl?2:1);
+  document.querySelectorAll(".bn").forEach(b=>b.disabled=true)
+}
+
+// respE(i, to) : valide la réponse. i = numéro de la proposition cliquée (manches 1 à 3) ;
+// sans i = réponse tapée (manche 4) ; to = true si le temps est écoulé.
+function respE(i,to){
+  if(S.done)return;
+  const x=E[S.ei],m=S.qs[S.qi],last=!m.ch.length;
+  let ok;
+  if(last){const v=$("#rep").value.trim();if(!to&&!v)return;ok=!to&&norm(v)===norm(m.p[1])}   // saisie : on compare sans accents
+  else ok=!to&&i!==undefined&&m.ch[i][0]===m.p[0];                                           // proposition : on compare les numéros
+  S.done=true;clearInterval(tm);
+  const pp=(S.half?x.pc:x.pm[S.qi])*(S.dbl?2:1);                // points de la manche (Clairvoyance et Gonflette comprises)
+  if(ok){S.sc[S.pi]+=pp;S.got++}
+  // on verrouille l’écran et on colore les propositions (vert = bonne réponse, rouge = mauvais choix)
+  document.querySelectorAll(".bn").forEach(b=>b.disabled=true);
+  if(last)$("#rep").disabled=true;
+  document.querySelectorAll(".opt").forEach((b,k)=>{b.disabled=true;if(m.ch[k][0]===m.p[0])b.classList.add("good");else if(k===i)b.classList.add("bad")});
+  // message + sprite du Pokémon : on le montre toujours pour que le joueur apprenne le cri
+  $("#fb").innerHTML=(ok?`<span style="color:var(--ok)">Bonne réponse ! +${pp}</span>`:`<span style="color:var(--ko)">${to?"Temps écoulé. ":"Raté. "}Réponse : ${h(m.p[1])}</span>`)+`<br><img src="${SPR(m.p[0])}" alt="" width="96" height="96" style="image-rendering:pixelated">`;
+  setTimeout(()=>{if(++S.qi<S.qs.length)askE();else endEp()},2000)
+}
 
 /* ----- Épreuve Duel de Types : +5 si bonne réponse, −3 sinon (le score peut descendre sous zéro) ----- */
 // tpHtml(cible) : fabrique les pastilles colorées des types affichés.
