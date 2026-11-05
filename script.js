@@ -19,7 +19,7 @@
 // puis, si elle n’est pas un simple « question → réponse tapée », écris ses
 // fonctions ask…/resp… (voir askD/respD pour l’exemple du Duel de Types) et
 // ajoute un « if » dans pick() et useB().
-// Les fichiers donnees-pokedex.js (variable ARCH) et donnees-echo.js (variable ECHO) sont chargés avant celui-ci.
+// Les fichiers donnees-pokedex.js (ARCH), donnees-echo.js (ECHO) et donnees-dresseurs.js (DRESSEURS) sont chargés avant celui-ci.
 // ==========================================================================
 /* ===== ÉPREUVES (cahier des charges). ok:false = pas encore jouable. q: [question, bonne réponse, autres réponses acceptées…] ===== */
 // Chaque épreuve est un objet avec ces champs :
@@ -89,7 +89,9 @@ const E=[
 {n:"Légendes Sonores",d:"Retrouve le Légendaire grâce à son thème musical",e:"🎵",c:"#d0a82b",max:15,bn:["Clairvoyance","Affiche le ou les types"],ok:false,q:[]},
 // Épreuve 7 : duel:1 = règles spéciales (askD/respD). 4 manches, +5 si juste (pts), −3 si faux (mal).
 {n:"Duel de Types",d:"Donne un Pokémon qui a le type affiché",e:"🔥",c:"#d0662b",max:20,bn:["Multi-Type","Change le double type"],ok:true,duel:1,pts:5,mal:3,man:4,q:[]},
-{n:"Défis du Dresseur",d:"Donne 3 Pokémon du dresseur affiché",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,q:[]}
+// Épreuve 8 : trainer:1 = règles spéciales (askT/respT). nb = Pokémon obligatoires (pm pts chacun) ; nbo = Pokémon bonus (pb pt chacun) ;
+// tt = temps total en secondes pour toute l’épreuve. Le dresseur et ses équipes viennent de donnees-dresseurs.js (variable DRESSEURS).
+{n:"Défis du Dresseur",d:"Donne 3 Pokémon du dresseur affiché",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,trainer:1,nb:3,nbo:10,pm:2,pb:1,tt:120,q:[]}
 ];
 /* Archives du Pokédex : les descriptions viennent du fichier donnees-pokedex.js (l’épreuve reste « bientôt » si ce fichier est absent). */
 // Archives du Pokédex : on remplit l’épreuve avec les descriptions de ARCH.
@@ -100,6 +102,8 @@ const E=[
 const GEN={};
 // Écho Sauvage : jouable seulement si donnees-echo.js est chargé (il crée la variable ECHO).
 if(typeof ECHO!=="undefined")E.find(e=>e.echo).ok=true;
+// Défis du Dresseur : jouable seulement si donnees-dresseurs.js est chargé (il crée la variable DRESSEURS).
+if(typeof DRESSEURS!=="undefined")E.find(e=>e.trainer).ok=true;
 if(typeof ARCH!=="undefined"){const x=E.find(e=>e.arch);x.q=ARCH.flatMap(([n,g,ds])=>{GEN[n]=g;return ds.map(d=>[d,n])});x.ok=true}
 // BI : emoji de chaque bonus d’épreuve (affiché dans le bouton de bonus).
 const BI={"Clairvoyance":"🔮","Échange Psy":"🔄","Téléport":"🌀","Jackpot":"🎰","Multi-Type":"🌈","Détection":"🔍"};
@@ -321,7 +325,8 @@ const API={async save(n,s){await srv("/scores",{mode:"Compétition",points:s})},
 //   b (bonus restants de chaque joueur), played (épreuves terminées),
 //   ei (épreuve en cours), qs (questions de l’épreuve), qi (numéro de question),
 //   dbl (Gonflette active), cur (cible du Duel), done / zero / t (état de la question),
-//   aud (cri en cours de lecture), half (Clairvoyance utilisée).
+//   aud (cri en cours de lecture), half (Clairvoyance utilisée),
+//   tr (dresseur affiché), trAll (tous ses Pokémon), found (Pokémon déjà trouvés : {n nom, p points, d donné par Détection}).
 // tm = le minuteur (setInterval) de la question en cours.
 let S,tm;
 // A(html) : affiche un écran = remplace tout le contenu de #app.
@@ -372,8 +377,8 @@ A(`${topbar("MÉTRONOME")}<div class="panel c"><p class="q">⏱️ Métronome ch
 // classiques) ou askD() (Duel de Types). En Versus, les joueurs suivants reçoivent les mêmes questions.
 function pick(i){S.ei=i;S.qi=0;S.got=0;S.dbl=!!S.b[S.pi].arm;S.b[S.pi].arm=0;
 /* en Versus, tous les joueurs reçoivent les mêmes questions / les mêmes types */
-if(!(S.players.length>1&&S.pi>0&&S.qsEi===i)){S.qs0=E[i].duel?Array.from({length:E[i].man},duelType):E[i].echo?echoManches():sh(E[i].q).slice(0,E[i].nq);S.qsEi=i}
-S.qs=S.qs0;E[i].duel?askD():E[i].echo?askE():ask()}
+if(!(S.players.length>1&&S.pi>0&&S.qsEi===i)){S.qs0=E[i].duel?Array.from({length:E[i].man},duelType):E[i].echo?echoManches():E[i].trainer?[DRESSEURS[Math.random()*DRESSEURS.length|0]]:sh(E[i].q).slice(0,E[i].nq);S.qsEi=i}
+S.qs=S.qs0;E[i].duel?askD():E[i].echo?askE():E[i].trainer?askT():ask()}
 
 // ask() : affiche UNE question classique (texte, champ de réponse, barre de temps, bonus) et lance le chrono.
 function ask(){clearInterval(tm);const x=E[S.ei],q=S.qs[S.qi];S.t=TIME;S.frozen=false;S.done=false;S.zero=false;
@@ -383,7 +388,7 @@ tm=setInterval(()=>{if(S.frozen)return;S.t-=.25;$("#bar").style.width=S.t/TIME*1
 
 // useB() : le joueur clique sur le bonus de l’épreuve. Chaque épreuve a son effet :
 // Duel → multiT() ; Archives → swapQ() ; sinon (Jackpot) : montre la réponse, la question vaut 0 point.
-function useB(){if(S.done||S.b[S.pi].e[S.ei])return;S.b[S.pi].e[S.ei]=1;if(E[S.ei].duel)return multiT();if(E[S.ei].arch)return swapQ();if(E[S.ei].echo)return clair();S.zero=true;
+function useB(){if(S.done||S.b[S.pi].e[S.ei])return;S.b[S.pi].e[S.ei]=1;if(E[S.ei].duel)return multiT();if(E[S.ei].arch)return swapQ();if(E[S.ei].echo)return clair();if(E[S.ei].trainer)return detec();S.zero=true;
 $("#fb").innerHTML=`Réponse : <b>${h(S.qs[S.qi][1])}</b> (cette question ne rapporte aucun point)`;
 document.querySelectorAll(".bn").forEach(b=>b.disabled=true)}
 
@@ -471,6 +476,80 @@ function respE(i,to){
   // message + sprite du Pokémon : on le montre toujours pour que le joueur apprenne le cri
   $("#fb").innerHTML=(ok?`<span style="color:var(--ok)">Bonne réponse ! +${pp}</span>`:`<span style="color:var(--ko)">${to?"Temps écoulé. ":"Raté. "}Réponse : ${h(m.p[1])}</span>`)+`<br><img src="${SPR(m.p[0])}" alt="" width="96" height="96" style="image-rendering:pixelated">`;
   setTimeout(()=>{if(++S.qi<S.qs.length)askE();else endEp()},2000)
+}
+
+// ===================== Épreuve 8 : DÉFIS DU DRESSEUR =====================
+// Déroulement : un dresseur est tiré au hasard (le même pour tous les joueurs en Versus).
+// Le joueur tape des Pokémon de ce dresseur, dans n’importe laquelle de ses équipes :
+//   les 3 premiers (obligatoires) valent 2 pts chacun ; les 10 suivants (bonus) valent 1 pt chacun ; maximum 16 pts.
+// Un seul chrono pour toute l’épreuve (E.tt secondes). Les bonnes réponses s’affichent au fur et à mesure.
+// Pas de pénalité en cas d’erreur. Le bouton « Terminer » apparaît quand les 3 obligatoires sont trouvés.
+// Bonus Détection : le jeu donne un Pokémon au joueur, mais il ne rapporte aucun point (il remplit quand même une case).
+// Données : DRESSEURS (donnees-dresseurs.js) = [{id, sprite, nom, role, note, equipes:{ jeu:[Pokémon…] }}, …].
+
+// Adresse du sprite d’un dresseur (Pokémon Showdown). Si l’image ne charge pas, un 🧢 s’affiche à la place.
+const TSPR=n=>`https://play.pokemonshowdown.com/sprites/trainers/${n}.png`;
+
+// equipeDe(dresseur) : tous les Pokémon DIFFÉRENTS du dresseur, jeux confondus (union des équipes).
+const equipeDe=t=>[...new Set(Object.values(t.equipes).flat())];
+
+// askT() : affiche l’épreuve (sprite, nom, liste des Pokémon trouvés, champ de saisie) et lance le chrono global.
+function askT(){
+  clearInterval(tm);
+  const x=E[S.ei],t=S.qs[0];                                   // S.qs[0] = le dresseur tiré par pick()
+  S.tr=t;S.trAll=equipeDe(t);S.found=[];S.t=x.tt;S.done=false;S.frozen=false;
+  A(`${topbar(h(x.n.toUpperCase()))}<div class="panel"><div class="bar"><div id="bar" style="width:100%"></div></div><div class="c" style="margin:14px 0"><img src="${TSPR(t.sprite)}" alt="🧢" height="110" style="image-rendering:pixelated;font-size:64px"><h2 style="font:900 26px Impact,sans-serif;margin-top:6px">${h(t.nom.toUpperCase())}</h2><p class="mut">${h(t.role)} — ${h(t.note)}</p></div><p class="c mut" id="tinfo"></p><div class="c" id="tlist" style="min-height:44px;margin:10px 0"></div><input id="rep" autocomplete="off" placeholder="Nom d’un Pokémon de ce dresseur" onkeydown="if(event.key==='Enter')respT()"><p class="c" id="fb" style="min-height:22px"></p><div class="row"><button class="btn" onclick="respT()">Valider</button><button class="btn alt" id="fin" onclick="finT()" style="display:none">Terminer</button></div></div>${bonusBar(true)}`);
+  majT();$("#rep").focus();
+  tm=setInterval(()=>{if(S.frozen)return;S.t-=.25;$("#bar").style.width=S.t/x.tt*100+"%";if(S.t<=0)finT(true)},250)
+}
+
+// majT() : met à jour le texte d’avancement, la liste des Pokémon trouvés et le bouton « Terminer ».
+function majT(){
+  const x=E[S.ei],n=S.found.length;
+  $("#tinfo").textContent=n<x.nb?`Trouve ${x.nb} Pokémon de ce dresseur : ${n}/${x.nb}`:`Bonus : ${n-x.nb}/${x.nbo} Pokémon en plus (1 pt chacun)`;
+  // les 3 premiers sont violets (obligatoires), les suivants gris (bonus) ; 🔎 = donné par Détection
+  $("#tlist").innerHTML=S.found.map((f,i)=>`<span style="display:inline-block;margin:3px;padding:6px 12px;border-radius:999px;background:${i<x.nb?"var(--vio)":"#2a2640"}">${h(f.n)}${f.d?" 🔎":""} <b>${f.p?"+"+f.p:"0"}</b></span>`).join("");
+  $("#fin").style.display=n>=x.nb?"":"none"
+}
+
+// respT() : valide le Pokémon tapé. Refuse s’il n’est pas dans les équipes du dresseur ou s’il a déjà été donné.
+function respT(){
+  if(S.done)return;
+  const v=$("#rep").value.trim();if(!v)return;
+  $("#rep").value="";$("#rep").focus();
+  const nom=S.trAll.find(p=>norm(p)===norm(v));                // norm() : on ignore accents et majuscules
+  if(!nom)return void($("#fb").innerHTML=`<span style="color:var(--ko)">${h(v)} ne fait pas partie des équipes de ${h(S.tr.nom)}.</span>`);
+  if(S.found.some(f=>f.n===nom))return void($("#fb").innerHTML=`<span class="mut">${h(nom)} : déjà donné.</span>`);
+  addT(nom,false)
+}
+
+// addT(nom, détection) : enregistre un Pokémon trouvé. Les nb premiers valent pm points, les suivants pb ;
+// un Pokémon donné par Détection vaut 0. Gonflette (S.dbl) double les points. Quand tout est trouvé, l’épreuve se termine.
+function addT(nom,detect){
+  const x=E[S.ei],pts=detect?0:(S.found.length<x.nb?x.pm:x.pb)*(S.dbl?2:1);
+  S.found.push({n:nom,p:pts,d:detect});S.sc[S.pi]+=pts;if(!detect)S.got++;
+  $("#fb").innerHTML=`<span style="color:var(--ok)">${h(nom)} ✔${pts?" +"+pts:""}</span>`;
+  majT();
+  if(S.found.length>=x.nb+x.nbo)finT()
+}
+
+// detec() : bonus Détection → donne un Pokémon du dresseur pas encore trouvé, pour 0 point.
+function detec(){
+  const restants=S.trAll.filter(p=>!S.found.some(f=>f.n===p));
+  document.querySelectorAll(".bn").forEach(b=>b.disabled=true);
+  if(restants.length)addT(restants[Math.random()*restants.length|0],true)
+}
+
+// finT(to) : fin de l’épreuve (bouton Terminer, tout trouvé, ou temps écoulé si to = true).
+// Affiche un récapitulatif avec quelques Pokémon manqués, puis passe à la suite avec endEp().
+function finT(to){
+  if(S.done)return;
+  S.done=true;clearInterval(tm);
+  document.querySelectorAll(".bn").forEach(b=>b.disabled=true);
+  $("#rep").disabled=true;$("#fin").style.display="none";
+  const rate=S.trAll.filter(p=>!S.found.some(f=>f.n===p));
+  $("#fb").innerHTML=`${to?"Temps écoulé. ":""}${S.found.length} Pokémon trouvés.${rate.length?`<br><span class="mut">Il y avait aussi : ${rate.slice(0,10).map(h).join(", ")}${rate.length>10?"…":""}</span>`:""}`;
+  setTimeout(endEp,3000)
 }
 
 /* ----- Épreuve Duel de Types : +5 si bonne réponse, −3 sinon (le score peut descendre sous zéro) ----- */
