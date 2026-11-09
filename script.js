@@ -19,7 +19,7 @@
 // puis, si elle n’est pas un simple « question → réponse tapée », écris ses
 // fonctions ask…/resp… (voir askD/respD pour l’exemple du Duel de Types) et
 // ajoute un « if » dans pick() et useB().
-// Les fichiers donnees-pokedex.js (ARCH), donnees-echo.js (ECHO) et donnees-dresseurs.js (DRESSEURS) sont chargés avant celui-ci.
+// Les fichiers donnees-pokedex.js (ARCH), donnees-echo.js (ECHO) donnees-dresseurs.js (DRESSEURS) et donnees-lignees.js (LIGNEES) sont chargés avant celui-ci.
 // ==========================================================================
 /* ===== ÉPREUVES (cahier des charges). ok:false = pas encore jouable. q: [question, bonne réponse, autres réponses acceptées…] ===== */
 // Chaque épreuve est un objet avec ces champs :
@@ -59,6 +59,8 @@ const E=[
 ["Quel Pokémon légendaire est au cœur du deuxième film Pokémon, Le Pouvoir est en toi ?", "Lugia"],
 ["Quel acteur prête sa voix à Pikachu dans le film Détective Pikachu (version originale) ?", "Ryan Reynolds", "Reynolds"],
 ["Quel champion de Galar Sacha affronte-t-il en finale pour devenir champion du monde ?", "Tarak", "Léon", "Leon"]]},
+
+
 // Épreuve 5 : même fonctionnement qu’Anime Attitude (autre liste de questions).
 {n:"Game Master",d:"Questions sur les jeux et les spin-off",e:"🎮",c:"#d04a4a",max:10,pts:2,nq:5,bn:["Jackpot","Donne la réponse, sans point"],ok:true,q:[
 ["Dans quelle région se passent Pokémon Rouge et Bleu ?", "Kanto"],
@@ -87,11 +89,15 @@ const E=[
 ["Quels jeux Switch, avec Pikachu ou Évoli, reprennent Pokémon Rouge et Bleu ?", "Let’s Go", "Lets Go", "Pokémon Let’s Go"],
 ["Comment s’appelle l’application mobile de cartes à collectionner lancée fin 2024 ?", "Pokémon TCG Pocket", "TCG Pocket", "Pocket", "JCC Pocket"]]},
 {n:"Légendes Sonores",d:"Retrouve le Légendaire grâce à son thème musical",e:"🎵",c:"#d0a82b",max:15,bn:["Clairvoyance","Affiche le ou les types"],ok:false,q:[]},
+
+
 // Épreuve 7 : duel:1 = règles spéciales (askD/respD). 4 manches, +5 si juste (pts), −3 si faux (mal).
 {n:"Duel de Types",d:"Donne un Pokémon qui a le type affiché",e:"🔥",c:"#d0662b",max:20,bn:["Multi-Type","Change le double type"],ok:true,duel:1,pts:5,mal:3,man:4,q:[]},
+
+
 // Épreuve 8 : trainer:1 = règles spéciales (askT/respT). nb = Pokémon obligatoires (pm pts chacun) ; nbo = Pokémon bonus (pb pt chacun) ;
 // tt = temps total en secondes pour toute l’épreuve. Le dresseur et ses équipes viennent de donnees-dresseurs.js (variable DRESSEURS).
-{n:"Défis du Dresseur",d:"Donne 3 Pokémon du dresseur affiché",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,trainer:1,nb:3,nbo:10,pm:2,pb:1,tt:120,q:[]}
+{n:"Défis du Dresseur",d:"Donne 3 Pokémon de lignées différentes du dresseur affiché",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,trainer:1,nb:3,nbo:10,pm:2,pb:1,tt:120,q:[]}
 ];
 /* Archives du Pokédex : les descriptions viennent du fichier donnees-pokedex.js (l’épreuve reste « bientôt » si ce fichier est absent). */
 // Archives du Pokédex : on remplit l’épreuve avec les descriptions de ARCH.
@@ -119,6 +125,8 @@ const norm=s=>String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/
 const $=s=>document.querySelector(s),h=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 // sh(tableau) : renvoie une copie MÉLANGÉE du tableau (algorithme de Fisher-Yates).
 const sh=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+
+
 /* ===== DUEL DE TYPES : base (type ou double type → Pokémon, formes comprises, noms français). Source : PokéAPI. ===== */
 /*DUEL-START*/
 // Base du Duel de Types. Clé = type ou double type (« Feu/Dragon »), valeur = noms de
@@ -289,6 +297,7 @@ const TYPES_D={"Poison/Plante":"Boustiflor|Bulbizarre|Chétiflor|Empiflor|Floriz
 "Glace/Fée":"Feunard|Feunard d'Alola",
 "Feu/Glace":"Darumacho|Darumacho de Galar",
 "Normal/Spectre":"Zoroark|Zoroark de Hisui|Zorua|Zorua de Hisui"};
+
 // TY : couleur de chaque type (pastille du Duel de Types).  TYL : liste des 18 noms de types.
 const TY={"Normal":"#a8a878","Combat":"#c03028","Vol":"#a890f0","Poison":"#a040a0","Sol":"#c9a84a","Roche":"#b8a038","Insecte":"#a8b820","Spectre":"#705898","Acier":"#9a9ab8","Feu":"#f08030","Eau":"#6890f0","Plante":"#78c850","Électrik":"#e0b800","Psy":"#f85888","Glace":"#7cc8c8","Dragon":"#7038f8","Ténèbres":"#705848","Fée":"#e0829a"};
 const TYL=Object.keys(TY);
@@ -326,7 +335,7 @@ const API={async save(n,s){await srv("/scores",{mode:"Compétition",points:s})},
 //   ei (épreuve en cours), qs (questions de l’épreuve), qi (numéro de question),
 //   dbl (Gonflette active), cur (cible du Duel), done / zero / t (état de la question),
 //   aud (cri en cours de lecture), half (Clairvoyance utilisée),
-//   tr (dresseur affiché), trAll (tous ses Pokémon), found (Pokémon déjà trouvés : {n nom, p points, d donné par Détection}).
+//   tr (dresseur affiché), trAll (tous ses Pokémon), found (Pokémon déjà trouvés : {n nom, p points, d donné par Détection, l lignée d’évolution}).
 // tm = le minuteur (setInterval) de la question en cours.
 let S,tm;
 // A(html) : affiche un écran = remplace tout le contenu de #app.
@@ -484,14 +493,36 @@ function respE(i,to){
 //   les 3 premiers (obligatoires) valent 2 pts chacun ; les 10 suivants (bonus) valent 1 pt chacun ; maximum 16 pts.
 // Un seul chrono pour toute l’épreuve (E.tt secondes). Les bonnes réponses s’affichent au fur et à mesure.
 // Pas de pénalité en cas d’erreur. Le bouton « Terminer » apparaît quand les 3 obligatoires sont trouvés.
+// RÈGLE DES LIGNÉES : dès qu’un Pokémon est trouvé, toute sa lignée d’évolution compte comme UNE seule réponse
+// (ex. : Nidoking donné → Nidoran♂ et Nidorino sont refusés). Les lignées viennent de donnees-lignees.js (variable LIGNEES).
+// Ainsi on ne peut pas réussir l’épreuve avec une seule famille d’évolution.
 // Bonus Détection : le jeu donne un Pokémon au joueur, mais il ne rapporte aucun point (il remplit quand même une case).
-// Données : DRESSEURS (donnees-dresseurs.js) = [{id, sprite, nom, role, note, equipes:{ jeu:[Pokémon…] }}, …].
+// Données : DRESSEURS (donnees-dresseurs.js) = [{id, sprite, nom, role, note, equipes:{ jeu:[Pokémon…] }, a_verifier:[…]}, …].
+// Les Pokémon de « a_verifier » sont acceptés comme ceux des équipes.
 
 // Adresse du sprite d’un dresseur (Pokémon Showdown). Si l’image ne charge pas, un 🧢 s’affiche à la place.
 const TSPR=n=>`https://play.pokemonshowdown.com/sprites/trainers/${n}.png`;
 
-// equipeDe(dresseur) : tous les Pokémon DIFFÉRENTS du dresseur, jeux confondus (union des équipes).
-const equipeDe=t=>[...new Set(Object.values(t.equipes).flat())];
+// equipeDe(dresseur) : tous les Pokémon DIFFÉRENTS du dresseur, jeux confondus (union des équipes
+// + la liste facultative « a_verifier », qui est acceptée comme le reste).
+const equipeDe=t=>[...new Set([...Object.values(t.equipes).flat(),...(t.a_verifier||[])])];
+
+// ligne(nom) : renvoie l’identifiant de la lignée d’évolution du Pokémon (le numéro de son groupe dans LIGNEES).
+// LGIDX est construit une seule fois : nom normalisé → numéro de groupe.
+// Si le nom est inconnu (ou si donnees-lignees.js est absent), il forme sa propre lignée.
+let LGIDX=null;
+function ligne(nom){
+  if(!LGIDX){LGIDX=new Map();if(typeof LIGNEES!=="undefined")LIGNEES.forEach((g,i)=>g.forEach(n=>LGIDX.set(norm(n),i)))}
+  const k=norm(nom);
+  return LGIDX.has(k)?LGIDX.get(k):"seul:"+k
+}
+
+// resteT() : un Pokémon (le premier de la liste) pour CHAQUE lignée du dresseur qui n’a pas encore été trouvée.
+function resteT(){
+  const vus=new Set(S.found.map(f=>f.l)),r=[];
+  for(const p of S.trAll){const l=ligne(p);if(!vus.has(l)){vus.add(l);r.push(p)}}
+  return r
+}
 
 // askT() : affiche l’épreuve (sprite, nom, liste des Pokémon trouvés, champ de saisie) et lance le chrono global.
 function askT(){
@@ -506,20 +537,22 @@ function askT(){
 // majT() : met à jour le texte d’avancement, la liste des Pokémon trouvés et le bouton « Terminer ».
 function majT(){
   const x=E[S.ei],n=S.found.length;
-  $("#tinfo").textContent=n<x.nb?`Trouve ${x.nb} Pokémon de ce dresseur : ${n}/${x.nb}`:`Bonus : ${n-x.nb}/${x.nbo} Pokémon en plus (1 pt chacun)`;
+  $("#tinfo").textContent=n<x.nb?`Trouve ${x.nb} Pokémon de ce dresseur : ${n}/${x.nb} (une lignée d’évolution = une seule réponse)`:`Bonus : ${n-x.nb}/${x.nbo} Pokémon en plus (1 pt chacun, une lignée = une réponse)`;
   // les 3 premiers sont violets (obligatoires), les suivants gris (bonus) ; 🔎 = donné par Détection
   $("#tlist").innerHTML=S.found.map((f,i)=>`<span style="display:inline-block;margin:3px;padding:6px 12px;border-radius:999px;background:${i<x.nb?"var(--vio)":"#2a2640"}">${h(f.n)}${f.d?" 🔎":""} <b>${f.p?"+"+f.p:"0"}</b></span>`).join("");
   $("#fin").style.display=n>=x.nb?"":"none"
 }
 
-// respT() : valide le Pokémon tapé. Refuse s’il n’est pas dans les équipes du dresseur ou s’il a déjà été donné.
+// respT() : valide le Pokémon tapé. Refuse s’il n’est pas dans les équipes du dresseur ou si sa lignée a déjà été donnée.
 function respT(){
   if(S.done)return;
   const v=$("#rep").value.trim();if(!v)return;
   $("#rep").value="";$("#rep").focus();
   const nom=S.trAll.find(p=>norm(p)===norm(v));                // norm() : on ignore accents et majuscules
   if(!nom)return void($("#fb").innerHTML=`<span style="color:var(--ko)">${h(v)} ne fait pas partie des équipes de ${h(S.tr.nom)}.</span>`);
-  if(S.found.some(f=>f.n===nom))return void($("#fb").innerHTML=`<span class="mut">${h(nom)} : déjà donné.</span>`);
+  // même lignée déjà trouvée (le Pokémon lui-même ou un autre de sa famille d’évolution) : refusé, aucun point
+  const deja=S.found.find(f=>f.l===ligne(nom));
+  if(deja)return void($("#fb").innerHTML=`<span class="mut">${h(nom)} fait partie de la lignée de ${h(deja.n)}, déjà donnée.</span>`);
   addT(nom,false)
 }
 
@@ -527,15 +560,17 @@ function respT(){
 // un Pokémon donné par Détection vaut 0. Gonflette (S.dbl) double les points. Quand tout est trouvé, l’épreuve se termine.
 function addT(nom,detect){
   const x=E[S.ei],pts=detect?0:(S.found.length<x.nb?x.pm:x.pb)*(S.dbl?2:1);
-  S.found.push({n:nom,p:pts,d:detect});S.sc[S.pi]+=pts;if(!detect)S.got++;
+  // l = lignée d’évolution du Pokémon (sert à refuser les autres membres de la même famille)
+  S.found.push({n:nom,p:pts,d:detect,l:ligne(nom)});S.sc[S.pi]+=pts;if(!detect)S.got++;
   $("#fb").innerHTML=`<span style="color:var(--ok)">${h(nom)} ✔${pts?" +"+pts:""}</span>`;
   majT();
-  if(S.found.length>=x.nb+x.nbo)finT()
+  // fin automatique : toutes les cases sont remplies OU il n’y a plus aucune lignée à trouver chez ce dresseur
+  if(S.found.length>=x.nb+x.nbo||!resteT().length)finT()
 }
 
-// detec() : bonus Détection → donne un Pokémon du dresseur pas encore trouvé, pour 0 point.
+// detec() : bonus Détection → donne un Pokémon d’une lignée pas encore trouvée, pour 0 point.
 function detec(){
-  const restants=S.trAll.filter(p=>!S.found.some(f=>f.n===p));
+  const restants=resteT();
   document.querySelectorAll(".bn").forEach(b=>b.disabled=true);
   if(restants.length)addT(restants[Math.random()*restants.length|0],true)
 }
@@ -547,8 +582,8 @@ function finT(to){
   S.done=true;clearInterval(tm);
   document.querySelectorAll(".bn").forEach(b=>b.disabled=true);
   $("#rep").disabled=true;$("#fin").style.display="none";
-  const rate=S.trAll.filter(p=>!S.found.some(f=>f.n===p));
-  $("#fb").innerHTML=`${to?"Temps écoulé. ":""}${S.found.length} Pokémon trouvés.${rate.length?`<br><span class="mut">Il y avait aussi : ${rate.slice(0,10).map(h).join(", ")}${rate.length>10?"…":""}</span>`:""}`;
+  const rate=resteT();                                          // une réponse possible par lignée manquée
+  $("#fb").innerHTML=`${to?"Temps écoulé. ":""}${S.found.length} Pokémon trouvés.${rate.length?`<br><span class="mut">Il y avait aussi (une réponse par lignée) : ${rate.slice(0,10).map(h).join(", ")}${rate.length>10?"…":""}</span>`:""}`;
   setTimeout(endEp,3000)
 }
 
@@ -588,6 +623,7 @@ if(S.mode==="libre"){const s=S.sc[0],rec=s>best;if(rec)ls.set(bestKey(),s);extra
 if(S.mode==="compet"){const ok=await API.save(S.players[0],S.sc[0]).then(()=>1,()=>0);extra=`<p class="c mut">${ok?"Score enregistré dans le classement.":"Score non enregistré : serveur injoignable ou session expirée (reconnecte-toi)."}</p>`}
 const r=S.players.map((p,i)=>({p,s:S.sc[i]})).sort((a,b)=>b.s-a.s);
 A(`<div class="top"><div><small>QUIZ POKÉMON</small><h1>RÉSULTATS</h1></div></div><div class="panel"><table><tr><th>#</th><th>Joueur</th><th>Points</th></tr>${r.map((x,i)=>`<tr><td>${i+1}</td><td>${h(x.p)}</td><td>${x.s}</td></tr>`).join("")}</table>${extra}</div><div class="row"><button class="btn" onclick="modes()">Menu</button>${S.mode==="compet"?`<button class="btn alt" onclick="board()">Classement</button>`:""}</div>`)}
+
 
 /* ===== COMPTES : gérés par le serveur (le pseudo et le jeton de connexion sont gardés dans le navigateur). ===== */
 // U.cur() : pseudo du joueur connecté (ou null).
