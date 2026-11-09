@@ -38,7 +38,7 @@ const E=[
 
 // Épreuve 1 : echo:1 = règles spéciales (askE/respE). man = 4 manches ; pm = points de chaque manche ;
 // nc = nombre de propositions par manche (0 = le joueur tape le nom) ; pc = points de la manche 4 avec Clairvoyance.
-{n:"Écho Sauvage",d:"Retrouve le Pokémon grâce à son cri",e:"🔊",c:"#3d6fd0",max:15,bn:["Clairvoyance","Affiche le type (manche 4)"],ok:false,echo:1,man:4,pm:[2,3,4,6],nc:[3,4,4,0],pc:3,q:[]},
+{n:"Écho Sauvage",d:"Retrouve le Pokémon grâce à son cri",e:"🔊",c:"#3d6fd0",max:10,bn:["Clairvoyance","Affiche le type (manche 4)"],ok:false,echo:1,man:4,pm:[2,3,4,6],nc:[3,4,4,0],pc:3,q:[]},
 
 
 // Épreuve 2 : q reste vide ici, il est rempli plus bas à partir de donnees-pokedex.js (ARCH).
@@ -105,8 +105,12 @@ const E=[
 
 // Épreuve 8 : trainer:1 = règles spéciales (askT/respT). nb = Pokémon obligatoires (pm pts chacun) ; nbo = Pokémon bonus (pb pt chacun) ;
 // tt = temps total en secondes pour toute l’épreuve. Le dresseur et ses équipes viennent de donnees-dresseurs.js (variable DRESSEURS).
-{n:"Défis du Dresseur",d:"Donne 3 Pokémon de lignées différentes du dresseur affiché",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,trainer:1,nb:3,nbo:10,pm:2,pb:1,tt:120,q:[]}
+{n:"Défis du Dresseur",d:"Donne 3 Pokémon de lignées différentes du dresseur affiché",e:"🧢",c:"#7b4fd0",max:14,bn:["Détection","Donne un Pokémon, sans point"],ok:false,trainer:1,nb:3,nbo:10,pm:2,pb:1,tt:120,q:[]}
 ];
+
+
+
+
 /* Archives du Pokédex : les descriptions viennent du fichier donnees-pokedex.js (l’épreuve reste « bientôt » si ce fichier est absent). */
 // Archives du Pokédex : on remplit l’épreuve avec les descriptions de ARCH.
 // ARCH = [[nom, génération, [description1, description2]], …]
