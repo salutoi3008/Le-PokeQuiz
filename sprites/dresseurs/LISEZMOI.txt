@@ -1,0 +1,5 @@
+Dossier des sprites de dresseurs (facultatif).
+Mets ici une image PNG par dresseur, nommée EXACTEMENT comme le champ "sprite" du dresseur, en minuscules :
+  pryce.png, blue.png, misty.png, giovanni.png, ...
+Le jeu cherche d'abord ici, puis chez Pokémon Showdown, puis affiche un casque 🧢.
+ATTENTION : GitHub Pages distingue majuscules et minuscules (Pryce.png ≠ pryce.png).
