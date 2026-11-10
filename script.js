@@ -19,7 +19,7 @@
 // puis, si elle n’est pas un simple « question → réponse tapée », écris ses
 // fonctions ask…/resp… (voir askD/respD pour l’exemple du Duel de Types) et
 // ajoute un « if » dans pick() et useB().
-// Les fichiers donnees-pokedex.js (ARCH), donnees-echo.js (ECHO) donnees-dresseurs.js (DRESSEURS) donnees-champions.js (CHAMPIONS) et donnees-lignees.js (LIGNEES) sont chargés avant celui-ci.
+// Les fichiers donnees/pokedex.js (ARCH), donnees/echo.js (ECHO) donnees/dresseurs.js (DRESSEURS) donnees/champions.js (CHAMPIONS) et donnees/lignees.js (LIGNEES) sont chargés avant celui-ci.
 // ==========================================================================
 /* ===== ÉPREUVES (cahier des charges). ok:false = pas encore jouable. q: [question, bonne réponse, autres réponses acceptées…] ===== */
 // Chaque épreuve est un objet avec ces champs :
@@ -35,7 +35,7 @@ const E=[
 // Épreuve 1 : echo:1 = règles spéciales (askE/respE). man = 4 manches ; pm = points de chaque manche ;
 // nc = nombre de propositions par manche (0 = le joueur tape le nom) ; pc = points de la manche 4 avec Clairvoyance.
 {n:"Écho Sauvage",d:"Retrouve le Pokémon grâce à son cri",e:"🔊",c:"#3d6fd0",max:15,bn:["Clairvoyance","Affiche le type (manche 4)"],ok:false,echo:1,man:4,pm:[2,3,4,6],nc:[3,4,4,0],pc:3,q:[]},
-// Épreuve 2 : q reste vide ici, il est rempli plus bas à partir de donnees-pokedex.js (ARCH).
+// Épreuve 2 : q reste vide ici, il est rempli plus bas à partir de donnees/pokedex.js (ARCH).
 {n:"Les Archives du Pokédex",d:"Retrouve le Pokémon grâce à sa description",e:"📖",c:"#2fa36b",max:9,pts:3,nq:3,arch:1,bn:["Échange Psy","Change la description"],ok:false,q:[]},
 {n:"Carte au Trésor",d:"Retrouve le jeu d’où provient le lieu",e:"📍",c:"#2a9bb0",max:6,bn:["Téléport","Change le lieu"],ok:false,q:[]},
 // Épreuve 4 : 5 questions tirées au hasard dans cette liste. Format : [question, bonne réponse, variantes…]. Les accents/majuscules sont ignorés.
@@ -90,20 +90,20 @@ const E=[
 // Épreuve 7 : duel:1 = règles spéciales (askD/respD). 4 manches, +5 si juste (pts), −3 si faux (mal).
 {n:"Duel de Types",d:"Donne un Pokémon qui a le type affiché",e:"🔥",c:"#d0662b",max:20,bn:["Multi-Type","Change le double type"],ok:true,duel:1,pts:5,mal:3,man:4,q:[]},
 // Épreuve 8 : trainer:1 = règles spéciales (askT/respT). nb = Pokémon obligatoires (pm pts chacun) ; nbo = Pokémon bonus (pb pt chacun) ;
-// tt = temps total en secondes pour toute l’épreuve ; nbmin = nombre minimum de lignées d’évolution qu’un dresseur doit avoir pour pouvoir être tiré. Le dresseur et ses équipes viennent de donnees-dresseurs.js (variable DRESSEURS).
+// tt = temps total en secondes pour toute l’épreuve ; nbmin = nombre minimum de lignées d’évolution qu’un dresseur doit avoir pour pouvoir être tiré. Le dresseur et ses équipes viennent de donnees/dresseurs.js (variable DRESSEURS).
 {n:"Défis du Dresseur",d:"Donne 3 Pokémon de lignées différentes du dresseur affiché",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,trainer:1,nb:3,nbo:10,pm:2,pb:1,tt:120,nbmin:3,q:[]}
 ];
-/* Archives du Pokédex : les descriptions viennent du fichier donnees-pokedex.js (l’épreuve reste « bientôt » si ce fichier est absent). */
+/* Archives du Pokédex : les descriptions viennent du fichier donnees/pokedex.js (l’épreuve reste « bientôt » si ce fichier est absent). */
 // Archives du Pokédex : on remplit l’épreuve avec les descriptions de ARCH.
 // ARCH = [[nom, génération, [description1, description2]], …]
 //   - GEN[nom]  : sert au badge « Génération ? » (nom → numéro de génération)
 //   - x.q       : liste de questions [description, nom] (même format que les autres épreuves)
-// Si donnees-pokedex.js est absent, ARCH n’existe pas : l’épreuve reste grisée.
+// Si donnees/pokedex.js est absent, ARCH n’existe pas : l’épreuve reste grisée.
 const GEN={};
-// Écho Sauvage : jouable seulement si donnees-echo.js est chargé (il crée la variable ECHO).
+// Écho Sauvage : jouable seulement si donnees/echo.js est chargé (il crée la variable ECHO).
 if(typeof ECHO!=="undefined")E.find(e=>e.echo).ok=true;
-// Défis du Dresseur : jouable seulement si donnees-dresseurs.js est chargé (il crée la variable DRESSEURS).
-// Les Champions d’arène (donnees-champions.js, variable CHAMPIONS) sont ajoutés à la liste des dresseurs.
+// Défis du Dresseur : jouable seulement si donnees/dresseurs.js est chargé (il crée la variable DRESSEURS).
+// Les Champions d’arène (donnees/champions.js, variable CHAMPIONS) sont ajoutés à la liste des dresseurs.
 if(typeof DRESSEURS!=="undefined"){if(typeof CHAMPIONS!=="undefined")DRESSEURS.push(...CHAMPIONS);E.find(e=>e.trainer).ok=true}
 if(typeof ARCH!=="undefined"){const x=E.find(e=>e.arch);x.q=ARCH.flatMap(([n,g,ds])=>{GEN[n]=g;return ds.map(d=>[d,n])});x.ok=true}
 // BI : emoji de chaque bonus d’épreuve (affiché dans le bouton de bonus).
@@ -413,7 +413,7 @@ document.querySelectorAll(".bn").forEach(b=>b.disabled=true)}
 //   manches 1 à 3 : on choisit parmi 3 puis 4 puis 4 propositions (sprite + nom) ;
 //   manche 4      : on tape le nom. Points : 2 / 3 / 4 / 6.
 // Bonus Clairvoyance (manche 4 seulement) : affiche le ou les types, mais la manche ne rapporte plus que 3 points.
-// Données : ECHO (donnees-echo.js) = [[numéro Pokédex, nom, types], …].
+// Données : ECHO (donnees/echo.js) = [[numéro Pokédex, nom, types], …].
 
 // Adresses du cri audio et du sprite d’un Pokémon, d’après son numéro de Pokédex.
 // Pour héberger les fichiers toi-même, change seulement ces deux lignes.
@@ -486,10 +486,10 @@ function respE(i,to){
 // Un seul chrono pour toute l’épreuve (E.tt secondes). Les bonnes réponses s’affichent au fur et à mesure.
 // Pas de pénalité en cas d’erreur. Le bouton « Terminer » apparaît quand les 3 obligatoires sont trouvés.
 // RÈGLE DES LIGNÉES : dès qu’un Pokémon est trouvé, toute sa lignée d’évolution compte comme UNE seule réponse
-// (ex. : Nidoking donné → Nidoran♂ et Nidorino sont refusés). Les lignées viennent de donnees-lignees.js (variable LIGNEES).
+// (ex. : Nidoking donné → Nidoran♂ et Nidorino sont refusés). Les lignées viennent de donnees/lignees.js (variable LIGNEES).
 // Ainsi on ne peut pas réussir l’épreuve avec une seule famille d’évolution.
 // Bonus Détection : le jeu donne un Pokémon au joueur, mais il ne rapporte aucun point (il remplit quand même une case).
-// Données : DRESSEURS (donnees-dresseurs.js) = [{id, sprite, nom, role, note, equipes:{ jeu:[Pokémon…] }, a_verifier:[…]}, …].
+// Données : DRESSEURS (donnees/dresseurs.js) = [{id, sprite, nom, role, note, equipes:{ jeu:[Pokémon…] }, a_verifier:[…]}, …].
 // Les Pokémon de « a_verifier » sont acceptés comme ceux des équipes.
 
 // TSPR(nom du sprite) : liste des adresses essayées dans l’ordre pour afficher le sprite d’un dresseur :
@@ -519,7 +519,7 @@ const equipeDe=t=>[...new Set([...Object.values(t.equipes).flat(),...(t.a_verifi
 
 // ligne(nom) : renvoie l’identifiant de la lignée d’évolution du Pokémon (le numéro de son groupe dans LIGNEES).
 // LGIDX est construit une seule fois : nom normalisé → numéro de groupe.
-// Si le nom est inconnu (ou si donnees-lignees.js est absent), il forme sa propre lignée.
+// Si le nom est inconnu (ou si donnees/lignees.js est absent), il forme sa propre lignée.
 let LGIDX=null;
 function ligne(nom){
   if(!LGIDX){LGIDX=new Map();if(typeof LIGNEES!=="undefined")LIGNEES.forEach((g,i)=>g.forEach(n=>LGIDX.set(norm(n),i)))}
