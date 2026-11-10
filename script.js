@@ -492,8 +492,19 @@ function respE(i,to){
 // Données : DRESSEURS (donnees-dresseurs.js) = [{id, sprite, nom, role, note, equipes:{ jeu:[Pokémon…] }, a_verifier:[…]}, …].
 // Les Pokémon de « a_verifier » sont acceptés comme ceux des équipes.
 
-// Adresse du sprite d’un dresseur (Pokémon Showdown). Si l’image ne charge pas, un 🧢 s’affiche à la place.
-const TSPR=n=>`https://play.pokemonshowdown.com/sprites/trainers/${n}.png`;
+// TSPR(nom du sprite) : liste des adresses essayées dans l’ordre pour afficher le sprite d’un dresseur :
+//   1) TON dossier sprites/dresseurs/ (ex. sprites/dresseurs/pryce.png) : le nom du fichier = le champ « sprite » du dresseur ;
+//   2) Pokémon Showdown ;
+//   3) si aucune image ne charge : un 🧢 (voir sprT).
+const TSPR=n=>[`sprites/dresseurs/${n}.png`,`https://play.pokemonshowdown.com/sprites/trainers/${n}.png`];
+
+// sprT(img) : appelée par le navigateur quand une image de dresseur ne charge pas (attribut onerror).
+// data-s contient les adresses qu’il reste à essayer, séparées par « | ». Quand il n’y en a plus, l’image est remplacée par un 🧢.
+function sprT(img){
+  const l=(img.dataset.s||"").split("|").filter(Boolean);
+  if(l.length){img.dataset.s=l.slice(1).join("|");img.src=l[0];return}   // source suivante
+  const e=document.createElement("div");e.textContent="🧢";e.style.fontSize="72px";img.replaceWith(e)   // plus aucune source
+}
 
 // tireDresseur(x) : tire un dresseur au hasard parmi ceux qui ont au moins x.nbmin lignées d’évolution différentes
 // (sinon l’épreuve serait impossible : il faut pouvoir trouver nb Pokémon de lignées différentes).
@@ -528,7 +539,7 @@ function askT(){
   clearInterval(tm);
   const x=E[S.ei],t=S.qs[0];                                   // S.qs[0] = le dresseur tiré par pick()
   S.tr=t;S.trAll=equipeDe(t);S.found=[];S.t=x.tt;S.done=false;S.frozen=false;
-  A(`${topbar(h(x.n.toUpperCase()))}<div class="panel"><div class="bar"><div id="bar" style="width:100%"></div></div><div class="c" style="margin:14px 0"><img src="${TSPR(t.sprite)}" alt="🧢" height="110" style="image-rendering:pixelated;font-size:64px"><h2 style="font:900 26px Impact,sans-serif;margin-top:6px">${h(t.nom.toUpperCase())}${t.alias?` <small style="font-size:14px;opacity:.7">(${h(t.alias)})</small>`:""}</h2><p class="mut">${h(t.role)} — ${h(t.note)}</p></div><p class="c mut" id="tinfo"></p><div class="c" id="tlist" style="min-height:44px;margin:10px 0"></div><input id="rep" autocomplete="off" placeholder="Nom d’un Pokémon de ce dresseur" onkeydown="if(event.key==='Enter')respT()"><p class="c" id="fb" style="min-height:22px"></p><div class="row"><button class="btn" onclick="respT()">Valider</button><button class="btn alt" id="fin" onclick="finT()" style="display:none">Terminer</button></div></div>${bonusBar(true)}`);
+  A(`${topbar(h(x.n.toUpperCase()))}<div class="panel"><div class="bar"><div id="bar" style="width:100%"></div></div><div class="c" style="margin:14px 0"><img src="${TSPR(t.sprite)[0]}" data-s="${TSPR(t.sprite).slice(1).join("|")}" onerror="sprT(this)" alt="" height="110" style="image-rendering:pixelated"><h2 style="font:900 26px Impact,sans-serif;margin-top:6px">${h(t.nom.toUpperCase())}${t.alias?` <small style="font-size:14px;opacity:.7">(${h(t.alias)})</small>`:""}</h2><p class="mut">${h(t.note.startsWith(t.role)?t.note:t.role+" — "+t.note)}</p></div><p class="c mut" id="tinfo"></p><div class="c" id="tlist" style="min-height:44px;margin:10px 0"></div><input id="rep" autocomplete="off" placeholder="Nom d’un Pokémon de ce dresseur" onkeydown="if(event.key==='Enter')respT()"><p class="c" id="fb" style="min-height:22px"></p><div class="row"><button class="btn" onclick="respT()">Valider</button><button class="btn alt" id="fin" onclick="finT()" style="display:none">Terminer</button></div></div>${bonusBar(true)}`);
   majT();$("#rep").focus();
   tm=setInterval(()=>{if(S.frozen)return;S.t-=.25;$("#bar").style.width=S.t/x.tt*100+"%";if(S.t<=0)finT(true)},250)
 }
