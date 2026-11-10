@@ -19,7 +19,7 @@
 // puis, si elle n’est pas un simple « question → réponse tapée », écris ses
 // fonctions ask…/resp… (voir askD/respD pour l’exemple du Duel de Types) et
 // ajoute un « if » dans pick() et useB().
-// Les fichiers donnees-pokedex.js (ARCH), donnees-echo.js (ECHO) donnees-dresseurs.js (DRESSEURS) et donnees-lignees.js (LIGNEES) sont chargés avant celui-ci.
+// Les fichiers donnees-pokedex.js (ARCH), donnees-echo.js (ECHO) donnees-dresseurs.js (DRESSEURS) donnees-champions.js (CHAMPIONS) et donnees-lignees.js (LIGNEES) sont chargés avant celui-ci.
 // ==========================================================================
 /* ===== ÉPREUVES (cahier des charges). ok:false = pas encore jouable. q: [question, bonne réponse, autres réponses acceptées…] ===== */
 // Chaque épreuve est un objet avec ces champs :
@@ -31,21 +31,13 @@
 //   q   : liste des questions [question, bonne réponse, variantes acceptées…]
 // Champs spéciaux : duel:1 (+ mal = points perdus, man = nombre de manches) pour le
 // Duel de Types ; arch:1 pour les Archives du Pokédex (questions chargées depuis ARCH).
-
-
 const E=[
-
-
 // Épreuve 1 : echo:1 = règles spéciales (askE/respE). man = 4 manches ; pm = points de chaque manche ;
 // nc = nombre de propositions par manche (0 = le joueur tape le nom) ; pc = points de la manche 4 avec Clairvoyance.
-{n:"Écho Sauvage",d:"Retrouve le Pokémon grâce à son cri",e:"🔊",c:"#3d6fd0",max:10,bn:["Clairvoyance","Affiche le type (manche 4)"],ok:false,echo:1,man:4,pm:[2,3,4,6],nc:[3,4,4,0],pc:3,q:[]},
-
-
+{n:"Écho Sauvage",d:"Retrouve le Pokémon grâce à son cri",e:"🔊",c:"#3d6fd0",max:15,bn:["Clairvoyance","Affiche le type (manche 4)"],ok:false,echo:1,man:4,pm:[2,3,4,6],nc:[3,4,4,0],pc:3,q:[]},
 // Épreuve 2 : q reste vide ici, il est rempli plus bas à partir de donnees-pokedex.js (ARCH).
-{n:"Les Archives du Pokédex",d:"Retrouve le Pokémon grâce à sa description",e:"📖",c:"#2fa36b",max:20,pts:3,nq:3,arch:1,bn:["Échange Psy","Change la description"],ok:false,q:[]},
+{n:"Les Archives du Pokédex",d:"Retrouve le Pokémon grâce à sa description",e:"📖",c:"#2fa36b",max:9,pts:3,nq:3,arch:1,bn:["Échange Psy","Change la description"],ok:false,q:[]},
 {n:"Carte au Trésor",d:"Retrouve le jeu d’où provient le lieu",e:"📍",c:"#2a9bb0",max:6,bn:["Téléport","Change le lieu"],ok:false,q:[]},
-
-
 // Épreuve 4 : 5 questions tirées au hasard dans cette liste. Format : [question, bonne réponse, variantes…]. Les accents/majuscules sont ignorés.
 {n:"Anime Attitude",d:"Questions sur l’anime Pokémon",e:"📺",c:"#c04aa0",max:10,pts:2,nq:5,bn:["Jackpot","Donne la réponse, sans point"],ok:true,q:[
 ["Quel est le Pokémon de départ de Sacha dans la série ?", "Pikachu"],
@@ -67,8 +59,6 @@ const E=[
 ["Quel Pokémon légendaire est au cœur du deuxième film Pokémon, Le Pouvoir est en toi ?", "Lugia"],
 ["Quel acteur prête sa voix à Pikachu dans le film Détective Pikachu (version originale) ?", "Ryan Reynolds", "Reynolds"],
 ["Quel champion de Galar Sacha affronte-t-il en finale pour devenir champion du monde ?", "Tarak", "Léon", "Leon"]]},
-
-
 // Épreuve 5 : même fonctionnement qu’Anime Attitude (autre liste de questions).
 {n:"Game Master",d:"Questions sur les jeux et les spin-off",e:"🎮",c:"#d04a4a",max:10,pts:2,nq:5,bn:["Jackpot","Donne la réponse, sans point"],ok:true,q:[
 ["Dans quelle région se passent Pokémon Rouge et Bleu ?", "Kanto"],
@@ -97,20 +87,12 @@ const E=[
 ["Quels jeux Switch, avec Pikachu ou Évoli, reprennent Pokémon Rouge et Bleu ?", "Let’s Go", "Lets Go", "Pokémon Let’s Go"],
 ["Comment s’appelle l’application mobile de cartes à collectionner lancée fin 2024 ?", "Pokémon TCG Pocket", "TCG Pocket", "Pocket", "JCC Pocket"]]},
 {n:"Légendes Sonores",d:"Retrouve le Légendaire grâce à son thème musical",e:"🎵",c:"#d0a82b",max:15,bn:["Clairvoyance","Affiche le ou les types"],ok:false,q:[]},
-
-
 // Épreuve 7 : duel:1 = règles spéciales (askD/respD). 4 manches, +5 si juste (pts), −3 si faux (mal).
 {n:"Duel de Types",d:"Donne un Pokémon qui a le type affiché",e:"🔥",c:"#d0662b",max:20,bn:["Multi-Type","Change le double type"],ok:true,duel:1,pts:5,mal:3,man:4,q:[]},
-
-
 // Épreuve 8 : trainer:1 = règles spéciales (askT/respT). nb = Pokémon obligatoires (pm pts chacun) ; nbo = Pokémon bonus (pb pt chacun) ;
-// tt = temps total en secondes pour toute l’épreuve. Le dresseur et ses équipes viennent de donnees-dresseurs.js (variable DRESSEURS).
-{n:"Défis du Dresseur",d:"Donne 3 Pokémon de lignées différentes du dresseur affiché",e:"🧢",c:"#7b4fd0",max:14,bn:["Détection","Donne un Pokémon, sans point"],ok:false,trainer:1,nb:3,nbo:10,pm:2,pb:1,tt:120,q:[]}
+// tt = temps total en secondes pour toute l’épreuve ; nbmin = nombre minimum de lignées d’évolution qu’un dresseur doit avoir pour pouvoir être tiré. Le dresseur et ses équipes viennent de donnees-dresseurs.js (variable DRESSEURS).
+{n:"Défis du Dresseur",d:"Donne 3 Pokémon de lignées différentes du dresseur affiché",e:"🧢",c:"#7b4fd0",max:16,bn:["Détection","Donne un Pokémon, sans point"],ok:false,trainer:1,nb:3,nbo:10,pm:2,pb:1,tt:120,nbmin:3,q:[]}
 ];
-
-
-
-
 /* Archives du Pokédex : les descriptions viennent du fichier donnees-pokedex.js (l’épreuve reste « bientôt » si ce fichier est absent). */
 // Archives du Pokédex : on remplit l’épreuve avec les descriptions de ARCH.
 // ARCH = [[nom, génération, [description1, description2]], …]
@@ -121,7 +103,8 @@ const GEN={};
 // Écho Sauvage : jouable seulement si donnees-echo.js est chargé (il crée la variable ECHO).
 if(typeof ECHO!=="undefined")E.find(e=>e.echo).ok=true;
 // Défis du Dresseur : jouable seulement si donnees-dresseurs.js est chargé (il crée la variable DRESSEURS).
-if(typeof DRESSEURS!=="undefined")E.find(e=>e.trainer).ok=true;
+// Les Champions d’arène (donnees-champions.js, variable CHAMPIONS) sont ajoutés à la liste des dresseurs.
+if(typeof DRESSEURS!=="undefined"){if(typeof CHAMPIONS!=="undefined")DRESSEURS.push(...CHAMPIONS);E.find(e=>e.trainer).ok=true}
 if(typeof ARCH!=="undefined"){const x=E.find(e=>e.arch);x.q=ARCH.flatMap(([n,g,ds])=>{GEN[n]=g;return ds.map(d=>[d,n])});x.ok=true}
 // BI : emoji de chaque bonus d’épreuve (affiché dans le bouton de bonus).
 const BI={"Clairvoyance":"🔮","Échange Psy":"🔄","Téléport":"🌀","Jackpot":"🎰","Multi-Type":"🌈","Détection":"🔍"};
@@ -137,8 +120,6 @@ const norm=s=>String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/
 const $=s=>document.querySelector(s),h=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 // sh(tableau) : renvoie une copie MÉLANGÉE du tableau (algorithme de Fisher-Yates).
 const sh=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
-
-
 /* ===== DUEL DE TYPES : base (type ou double type → Pokémon, formes comprises, noms français). Source : PokéAPI. ===== */
 /*DUEL-START*/
 // Base du Duel de Types. Clé = type ou double type (« Feu/Dragon »), valeur = noms de
@@ -309,7 +290,6 @@ const TYPES_D={"Poison/Plante":"Boustiflor|Bulbizarre|Chétiflor|Empiflor|Floriz
 "Glace/Fée":"Feunard|Feunard d'Alola",
 "Feu/Glace":"Darumacho|Darumacho de Galar",
 "Normal/Spectre":"Zoroark|Zoroark de Hisui|Zorua|Zorua de Hisui"};
-
 // TY : couleur de chaque type (pastille du Duel de Types).  TYL : liste des 18 noms de types.
 const TY={"Normal":"#a8a878","Combat":"#c03028","Vol":"#a890f0","Poison":"#a040a0","Sol":"#c9a84a","Roche":"#b8a038","Insecte":"#a8b820","Spectre":"#705898","Acier":"#9a9ab8","Feu":"#f08030","Eau":"#6890f0","Plante":"#78c850","Électrik":"#e0b800","Psy":"#f85888","Glace":"#7cc8c8","Dragon":"#7038f8","Ténèbres":"#705848","Fée":"#e0829a"};
 const TYL=Object.keys(TY);
@@ -398,7 +378,7 @@ A(`${topbar("MÉTRONOME")}<div class="panel c"><p class="q">⏱️ Métronome ch
 // classiques) ou askD() (Duel de Types). En Versus, les joueurs suivants reçoivent les mêmes questions.
 function pick(i){S.ei=i;S.qi=0;S.got=0;S.dbl=!!S.b[S.pi].arm;S.b[S.pi].arm=0;
 /* en Versus, tous les joueurs reçoivent les mêmes questions / les mêmes types */
-if(!(S.players.length>1&&S.pi>0&&S.qsEi===i)){S.qs0=E[i].duel?Array.from({length:E[i].man},duelType):E[i].echo?echoManches():E[i].trainer?[DRESSEURS[Math.random()*DRESSEURS.length|0]]:sh(E[i].q).slice(0,E[i].nq);S.qsEi=i}
+if(!(S.players.length>1&&S.pi>0&&S.qsEi===i)){S.qs0=E[i].duel?Array.from({length:E[i].man},duelType):E[i].echo?echoManches():E[i].trainer?[tireDresseur(E[i])]:sh(E[i].q).slice(0,E[i].nq);S.qsEi=i}
 S.qs=S.qs0;E[i].duel?askD():E[i].echo?askE():E[i].trainer?askT():ask()}
 
 // ask() : affiche UNE question classique (texte, champ de réponse, barre de temps, bonus) et lance le chrono.
@@ -515,6 +495,13 @@ function respE(i,to){
 // Adresse du sprite d’un dresseur (Pokémon Showdown). Si l’image ne charge pas, un 🧢 s’affiche à la place.
 const TSPR=n=>`https://play.pokemonshowdown.com/sprites/trainers/${n}.png`;
 
+// tireDresseur(x) : tire un dresseur au hasard parmi ceux qui ont au moins x.nbmin lignées d’évolution différentes
+// (sinon l’épreuve serait impossible : il faut pouvoir trouver nb Pokémon de lignées différentes).
+function tireDresseur(x){
+  const ok=DRESSEURS.filter(t=>new Set(equipeDe(t).map(ligne)).size>=x.nbmin);
+  return ok[Math.random()*ok.length|0]
+}
+
 // equipeDe(dresseur) : tous les Pokémon DIFFÉRENTS du dresseur, jeux confondus (union des équipes
 // + la liste facultative « a_verifier », qui est acceptée comme le reste).
 const equipeDe=t=>[...new Set([...Object.values(t.equipes).flat(),...(t.a_verifier||[])])];
@@ -541,7 +528,7 @@ function askT(){
   clearInterval(tm);
   const x=E[S.ei],t=S.qs[0];                                   // S.qs[0] = le dresseur tiré par pick()
   S.tr=t;S.trAll=equipeDe(t);S.found=[];S.t=x.tt;S.done=false;S.frozen=false;
-  A(`${topbar(h(x.n.toUpperCase()))}<div class="panel"><div class="bar"><div id="bar" style="width:100%"></div></div><div class="c" style="margin:14px 0"><img src="${TSPR(t.sprite)}" alt="🧢" height="110" style="image-rendering:pixelated;font-size:64px"><h2 style="font:900 26px Impact,sans-serif;margin-top:6px">${h(t.nom.toUpperCase())}</h2><p class="mut">${h(t.role)} — ${h(t.note)}</p></div><p class="c mut" id="tinfo"></p><div class="c" id="tlist" style="min-height:44px;margin:10px 0"></div><input id="rep" autocomplete="off" placeholder="Nom d’un Pokémon de ce dresseur" onkeydown="if(event.key==='Enter')respT()"><p class="c" id="fb" style="min-height:22px"></p><div class="row"><button class="btn" onclick="respT()">Valider</button><button class="btn alt" id="fin" onclick="finT()" style="display:none">Terminer</button></div></div>${bonusBar(true)}`);
+  A(`${topbar(h(x.n.toUpperCase()))}<div class="panel"><div class="bar"><div id="bar" style="width:100%"></div></div><div class="c" style="margin:14px 0"><img src="${TSPR(t.sprite)}" alt="🧢" height="110" style="image-rendering:pixelated;font-size:64px"><h2 style="font:900 26px Impact,sans-serif;margin-top:6px">${h(t.nom.toUpperCase())}${t.alias?` <small style="font-size:14px;opacity:.7">(${h(t.alias)})</small>`:""}</h2><p class="mut">${h(t.role)} — ${h(t.note)}</p></div><p class="c mut" id="tinfo"></p><div class="c" id="tlist" style="min-height:44px;margin:10px 0"></div><input id="rep" autocomplete="off" placeholder="Nom d’un Pokémon de ce dresseur" onkeydown="if(event.key==='Enter')respT()"><p class="c" id="fb" style="min-height:22px"></p><div class="row"><button class="btn" onclick="respT()">Valider</button><button class="btn alt" id="fin" onclick="finT()" style="display:none">Terminer</button></div></div>${bonusBar(true)}`);
   majT();$("#rep").focus();
   tm=setInterval(()=>{if(S.frozen)return;S.t-=.25;$("#bar").style.width=S.t/x.tt*100+"%";if(S.t<=0)finT(true)},250)
 }
@@ -635,7 +622,6 @@ if(S.mode==="libre"){const s=S.sc[0],rec=s>best;if(rec)ls.set(bestKey(),s);extra
 if(S.mode==="compet"){const ok=await API.save(S.players[0],S.sc[0]).then(()=>1,()=>0);extra=`<p class="c mut">${ok?"Score enregistré dans le classement.":"Score non enregistré : serveur injoignable ou session expirée (reconnecte-toi)."}</p>`}
 const r=S.players.map((p,i)=>({p,s:S.sc[i]})).sort((a,b)=>b.s-a.s);
 A(`<div class="top"><div><small>QUIZ POKÉMON</small><h1>RÉSULTATS</h1></div></div><div class="panel"><table><tr><th>#</th><th>Joueur</th><th>Points</th></tr>${r.map((x,i)=>`<tr><td>${i+1}</td><td>${h(x.p)}</td><td>${x.s}</td></tr>`).join("")}</table>${extra}</div><div class="row"><button class="btn" onclick="modes()">Menu</button>${S.mode==="compet"?`<button class="btn alt" onclick="board()">Classement</button>`:""}</div>`)}
-
 
 /* ===== COMPTES : gérés par le serveur (le pseudo et le jeton de connexion sont gardés dans le navigateur). ===== */
 // U.cur() : pseudo du joueur connecté (ou null).
